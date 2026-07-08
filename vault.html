@@ -3,339 +3,417 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Vault - Panel</title>
+    <title>Panel Seguro</title>
     <meta name="robots" content="noindex, nofollow">
-    <link rel="stylesheet" href="css/style.css">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --card: #1a1a1a;
+            --border: #2a2a2a;
+            --text: #e0e0e0;
+            --text-dim: #888;
+            --accent: #ffffff;
+            --green: #00cc66;
+            --error: #ff4444;
+            --warn: #ffaa00;
+            --radius: 16px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .container { width: 100%; max-width: 500px; padding: 20px; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px 24px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .header h1 { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .header h1 span { font-size: 22px; }
+        .logout {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .logout:active { background: #222; }
+        .menu {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .menu-btn {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            color: var(--text);
+        }
+        .menu-btn:active { background: #222; transform: scale(0.97); }
+        .menu-btn .icon { font-size: 32px; display: block; margin-bottom: 10px; }
+        .menu-btn .title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+        .menu-btn .desc { font-size: 12px; color: var(--text-dim); }
+        .panel { display: none; animation: fade 0.25s ease; }
+        @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .panel h2 { font-size: 18px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 6px; font-weight: 500; }
+        .form-group input, .form-group textarea {
+            width: 100%; padding: 12px 14px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            resize: vertical;
+        }
+        .form-group input:focus, .form-group textarea:focus { border-color: #555; }
+        .file-zone {
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            padding: 28px;
+            text-align: center;
+            cursor: pointer;
+            background: var(--bg);
+            transition: border 0.2s;
+        }
+        .file-zone:active { border-color: #555; }
+        .file-zone span { font-size: 28px; display: block; margin-bottom: 6px; }
+        .file-zone p { font-size: 13px; color: var(--text-dim); }
+        .file-list { margin-top: 10px; }
+        .file-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 10px; background: var(--bg);
+            border: 1px solid var(--border); border-radius: 8px;
+            margin-bottom: 6px; font-size: 13px;
+        }
+        .file-item span:last-child { color: var(--text-dim); font-size: 11px; margin-left: auto; }
+        .actions { display: flex; gap: 8px; margin-top: 20px; }
+        .btn {
+            padding: 12px 20px; border-radius: 10px;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            font-family: inherit; border: none; transition: all 0.2s;
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: var(--accent); color: var(--bg); flex: 1; }
+        .btn-primary:active { background: #ddd; }
+        .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+        .btn-small {
+            padding: 6px 12px; border-radius: 6px; font-size: 12px;
+            background: var(--bg); color: var(--text);
+            border: 1px solid var(--border); cursor: pointer;
+            text-decoration: none; font-family: inherit;
+        }
+        .btn-copy {
+            padding: 8px 16px; border-radius: 8px; font-size: 13px;
+            background: var(--bg); color: var(--text);
+            border: 1px solid var(--border); cursor: pointer;
+            font-family: inherit; margin-top: 8px;
+        }
+        .token-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px; margin: 16px 0;
+            text-align: center;
+        }
+        .token-box code {
+            display: block; font-size: 15px; color: var(--text);
+            letter-spacing: 1px; margin: 8px 0; word-break: break-all;
+            user-select: all;
+        }
+        .warn-box {
+            background: rgba(255,170,0,0.08);
+            border: 1px solid rgba(255,170,0,0.2);
+            border-radius: 10px; padding: 14px;
+            margin: 16px 0; font-size: 12px; color: var(--warn);
+        }
+        .token-input {
+            display: flex; gap: 8px; margin-bottom: 14px;
+        }
+        .token-input input {
+            flex: 1; padding: 12px 14px;
+            background: var(--bg); border: 1px solid var(--border);
+            border-radius: 10px; color: var(--text);
+            font-size: 14px; font-family: inherit; outline: none;
+        }
+        .token-error {
+            background: rgba(255,68,68,0.08);
+            border: 1px solid rgba(255,68,68,0.2);
+            color: var(--error); padding: 10px; border-radius: 8px;
+            font-size: 13px; margin-bottom: 12px; display: none;
+        }
+        .doc-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px; padding: 16px; margin-bottom: 12px;
+        }
+        .doc-card h4 { font-size: 15px; margin-bottom: 6px; }
+        .doc-card .meta { font-size: 12px; color: var(--text-dim); margin-bottom: 12px; display: flex; gap: 12px; }
+        .file-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px; background: var(--card);
+            border: 1px solid var(--border); border-radius: 8px;
+            margin-bottom: 6px; gap: 8px; flex-wrap: wrap;
+        }
+        .file-row .info { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .file-row .info .size { color: var(--text-dim); font-size: 11px; }
+        .success-icon { font-size: 48px; text-align: center; margin-bottom: 12px; }
+        .center { text-align: center; }
+        .badge {
+            display: inline-block; padding: 4px 10px;
+            background: rgba(0,204,102,0.1); color: var(--green);
+            border: 1px solid rgba(0,204,102,0.2);
+            border-radius: 20px; font-size: 11px;
+        }
+    </style>
 </head>
 <body>
-    <canvas id="matrix-bg"></canvas>
     <div class="container">
-        <div class="vault-panel">
-            <div class="vault-header">
-                <h1>🔐 SECURE VAULT</h1>
-                <div class="header-actions">
-                    <span id="session-timer" class="session-timer"></span>
-                    <button onclick="logout()" class="btn-logout">⏻ CERRAR</button>
+        <div class="card" id="main-card">
+            <div class="header">
+                <h1><span>🔐</span> Panel Seguro</h1>
+                <button class="logout" onclick="logout()">Salir</button>
+            </div>
+
+            <div id="menu" class="menu">
+                <div class="menu-btn" onclick="showRegister()">
+                    <span class="icon">📝</span>
+                    <div class="title">Registrar</div>
+                    <div class="desc">Nuevo producto y documentos</div>
+                </div>
+                <div class="menu-btn" onclick="showToken()">
+                    <span class="icon">🔑</span>
+                    <div class="title">Consultar</div>
+                    <div class="desc">Ver documentos por token</div>
                 </div>
             </div>
-            
-            <div id="main-menu" class="vault-options">
-                <div class="option-card" onclick="showRegister()">
-                    <div class="option-icon">📝</div>
-                    <h3>Registrar Producto</h3>
-                    <p>Crear nuevo registro con documentacion encriptada</p>
-                </div>
-                <div class="option-card" onclick="showTokenInput()">
-                    <div class="option-icon">🔑</div>
-                    <h3>Ingresar Token</h3>
-                    <p>Acceder a documentacion mediante token seguro</p>
-                </div>
-            </div>
-            
-            <div id="register-panel" class="sub-panel" style="display:none;">
-                <h2>📝 Registrar Nuevo Producto</h2>
-                <form id="product-form" onsubmit="registerProduct(event)">
+
+            <div id="register-panel" class="panel">
+                <h2>📝 Registrar Producto</h2>
+                <form onsubmit="registerProduct(event)">
                     <div class="form-group">
-                        <label>Nombre del Producto *</label>
-                        <input type="text" id="product-name" required maxlength="100" placeholder="Nombre del producto">
+                        <label>Nombre del producto *</label>
+                        <input type="text" id="pname" required maxlength="100" placeholder="Ej: Contrato importante">
                     </div>
                     <div class="form-group">
                         <label>Descripcion</label>
-                        <textarea id="product-desc" rows="3" maxlength="500" placeholder="Descripcion opcional"></textarea>
+                        <textarea id="pdesc" rows="2" maxlength="300" placeholder="Opcional"></textarea>
                     </div>
                     <div class="form-group">
-                        <label>Documentacion * (max 10MB por archivo)</label>
-                        <div class="file-upload-area" id="file-drop-zone">
-                            <input type="file" id="product-file" multiple style="display:none" accept=".pdf,.doc,.docx,.txt,.jpg,.png,.zip">
-                            <div class="upload-placeholder" onclick="document.getElementById('product-file').click()">
-                                <span>📁</span>
-                                <p>Click para seleccionar archivos</p>
-                                <p class="small">o arrastra y suelta aqui</p>
-                            </div>
+                        <label>Documentos * (max 10MB)</label>
+                        <div class="file-zone" onclick="document.getElementById('pfile').click()">
+                            <span>📁</span>
+                            <p>Seleccionar archivos</p>
                         </div>
-                        <div id="file-preview" class="file-preview"></div>
+                        <input type="file" id="pfile" multiple style="display:none" accept=".pdf,.doc,.docx,.txt,.jpg,.png,.zip">
+                        <div class="file-list" id="file-preview"></div>
                     </div>
                     <div class="form-group">
                         <label>Fecha *</label>
-                        <input type="date" id="product-date" required>
+                        <input type="date" id="pdate" required>
                     </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn-primary" id="submit-btn">🔒 Guardar y Generar Token</button>
-                        <button type="button" onclick="showMainMenu()" class="btn-secondary">← Cancelar</button>
+                    <div class="actions">
+                        <button type="submit" class="btn btn-primary" id="submit-btn">Generar Token</button>
+                        <button type="button" class="btn btn-secondary" onclick="showMenu()">Cancelar</button>
                     </div>
                 </form>
-                
-                <div id="token-result" style="display:none;" class="token-result-panel">
+
+                <div id="token-result" style="display:none;">
                     <div class="success-icon">✅</div>
-                    <h3>Producto Registrado Exitosamente</h3>
-                    <div class="token-display">
-                        <p>Token de Acceso Unico:</p>
-                        <code id="generated-token"></code>
-                        <button onclick="copyToken()" class="btn-copy">📋 Copiar Token</button>
+                    <h3 style="text-align:center;">Producto Registrado</h3>
+                    <div class="token-box">
+                        <p style="color:var(--text-dim);font-size:13px;">Token de acceso:</p>
+                        <code id="gen-token"></code>
+                        <button class="btn-copy" onclick="copyToken()">Copiar Token</button>
                     </div>
-                    <div class="warning-box">
-                        <p>⚠️ <strong>IMPORTANTE:</strong> Este token es la UNICA forma de acceder a la documentacion.</p>
-                        <p>Guardelo de forma segura. No podra ser recuperado.</p>
+                    <div class="warn-box">
+                        ⚠️ Guarde este token. Es la unica forma de acceder a los documentos.
                     </div>
-                    <button onclick="showMainMenu()" class="btn-primary">Volver al Menu</button>
+                    <button class="btn btn-primary" onclick="showMenu()" style="width:100%;">Volver</button>
                 </div>
             </div>
-            
-            <div id="token-panel" class="sub-panel" style="display:none;">
-                <h2>🔑 Ingresar Token de Acceso</h2>
-                <div class="token-input-group">
-                    <input type="text" id="access-token" placeholder="Ingrese el token (VAULT-XXXX-XXXX-XXXX)" autocomplete="off">
-                    <button onclick="verifyToken()" class="btn-primary">🔍 Verificar</button>
+
+            <div id="token-panel" class="panel">
+                <h2>🔑 Consultar Documentos</h2>
+                <div class="token-input">
+                    <input type="text" id="atoken" placeholder="Token VAULT-XXXX-XXXX-XXXX">
+                    <button class="btn btn-primary" onclick="verifyToken()" style="flex:0;">Buscar</button>
                 </div>
-                <div id="token-error" class="token-error" style="display:none;"></div>
-                
-                <div id="document-viewer" style="display:none;" class="document-viewer">
-                    <div class="doc-header">
-                        <h3>📄 Documentacion Recuperada</h3>
-                        <span class="verified-badge">✓ Token Verificado</span>
+                <div class="token-error" id="token-error"></div>
+                <div id="doc-viewer" style="display:none;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                        <h3 style="font-size:16px;">📄 Resultado</h3>
+                        <span class="badge">✓ Verificado</span>
                     </div>
                     <div id="doc-content"></div>
-                    <button onclick="showMainMenu()" class="btn-secondary">← Volver</button>
+                    <button class="btn btn-secondary" onclick="showMenu()" style="margin-top:12px;">← Volver</button>
                 </div>
             </div>
         </div>
     </div>
-    
-    <script src="js/crypto.js"></script>
+
+    <script src="js/cripto.js"></script>
     <script src="js/security.js"></script>
     <script src="js/storage.js"></script>
     <script>
-        function checkSession() {
-            const session = sessionStorage.getItem('secure_session');
-            const expiry = parseInt(sessionStorage.getItem('session_expiry') || '0');
-            if (!session || Date.now() > expiry) {
-                sessionStorage.clear();
-                window.location.href = 'index.html';
-                return false;
-            }
-            return true;
+        if (!sessionStorage.getItem('secure_session') || Date.now() > parseInt(sessionStorage.getItem('session_expiry')||'0')) {
+            window.location.href = 'index.html';
         }
-        
-        if (!checkSession()) throw new Error('Acceso no autorizado');
-        
-        const SESSION_DURATION = 1800000;
-        const SESSION_WARNING = 300000;
-        let inactivityTimer;
-        
-        function initSession() {
-            updateSessionTimer();
-            resetInactivityTimer();
-            ['mousemove', 'keypress', 'click', 'scroll', 'touchstart'].forEach(event => {
-                document.addEventListener(event, resetInactivityTimer);
+
+        document.getElementById('pfile').addEventListener('change', function(e) {
+            var html = '';
+            Array.from(e.target.files).forEach(function(f) {
+                var size = f.size < 1024 ? f.size + ' B' : f.size < 1048576 ? (f.size/1024).toFixed(1) + ' KB' : (f.size/1048576).toFixed(1) + ' MB';
+                html += '<div class="file-item"><span>📄</span><span>'+f.name+'</span><span>'+size+'</span></div>';
             });
-        }
-        
-        function resetInactivityTimer() {
-            clearTimeout(inactivityTimer);
-            inactivityTimer = setTimeout(logout, SESSION_DURATION);
-            sessionStorage.setItem('session_expiry', Date.now() + SESSION_DURATION);
-            updateSessionTimer();
-        }
-        
-        function updateSessionTimer() {
-            const expiry = parseInt(sessionStorage.getItem('session_expiry') || '0');
-            const remaining = Math.max(0, expiry - Date.now());
-            const minutes = Math.floor(remaining / 60000);
-            const seconds = Math.floor((remaining % 60000) / 1000);
-            const timer = document.getElementById('session-timer');
-            timer.textContent = '⏱ ' + minutes + ':' + seconds.toString().padStart(2, '0');
-            if (remaining < SESSION_WARNING && remaining > 0) timer.className = 'session-timer warning';
-            else timer.className = 'session-timer';
-        }
-        
-        setInterval(updateSessionTimer, 1000);
-        initSession();
-        initMatrixEffect();
-        setupFileDropZone();
-        
+            document.getElementById('file-preview').innerHTML = html;
+        });
+
         function showRegister() {
-            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('menu').style.display = 'none';
             document.getElementById('register-panel').style.display = 'block';
             document.getElementById('token-panel').style.display = 'none';
             document.getElementById('token-result').style.display = 'none';
-            document.getElementById('product-form').style.display = 'block';
-            document.getElementById('product-form').reset();
+            document.querySelector('#register-panel form').style.display = 'block';
+            document.querySelector('#register-panel form').reset();
             document.getElementById('file-preview').innerHTML = '';
         }
-        
-        function showTokenInput() {
-            document.getElementById('main-menu').style.display = 'none';
-            document.getElementById('token-panel').style.display = 'block';
+
+        function showToken() {
+            document.getElementById('menu').style.display = 'none';
             document.getElementById('register-panel').style.display = 'none';
-            document.getElementById('document-viewer').style.display = 'none';
+            document.getElementById('token-panel').style.display = 'block';
+            document.getElementById('doc-viewer').style.display = 'none';
             document.getElementById('token-error').style.display = 'none';
-            document.getElementById('access-token').value = '';
+            document.getElementById('atoken').value = '';
         }
-        
-        function showMainMenu() {
-            document.getElementById('main-menu').style.display = 'grid';
+
+        function showMenu() {
+            document.getElementById('menu').style.display = 'grid';
             document.getElementById('register-panel').style.display = 'none';
             document.getElementById('token-panel').style.display = 'none';
         }
-        
-        async function registerProduct(event) {
-            event.preventDefault();
-            const submitBtn = document.getElementById('submit-btn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = '⏳ Procesando...';
+
+        async function registerProduct(e) {
+            e.preventDefault();
+            var btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.textContent = 'Procesando...';
             try {
-                const productData = {
-                    name: document.getElementById('product-name').value.replace(/[<>]/g, ''),
-                    description: document.getElementById('product-desc').value.replace(/[<>]/g, ''),
-                    date: document.getElementById('product-date').value,
-                    files: await getFilesData(),
-                    metadata: {
-                        created: new Date().toISOString(),
-                        version: '3.0'
-                    }
+                var files = [];
+                var fInput = document.getElementById('pfile');
+                for (var i = 0; i < fInput.files.length; i++) {
+                    var f = fInput.files[i];
+                    if (f.size > 10485760) throw new Error('Archivo muy grande: ' + f.name);
+                    var data = await readFile(f);
+                    files.push({ name: f.name, type: f.type, size: f.size, data: data });
+                }
+                var product = {
+                    name: document.getElementById('pname').value.replace(/[<>]/g,''),
+                    description: document.getElementById('pdesc').value.replace(/[<>]/g,''),
+                    date: document.getElementById('pdate').value,
+                    files: files,
+                    metadata: { created: new Date().toISOString() }
                 };
-                if (productData.files.some(f => f.size > 10 * 1024 * 1024)) {
-                    throw new Error('Los archivos no deben superar 10MB');
-                }
-                const token = await CryptoManager.generateProductToken(productData);
-                const saved = await SecureStorageManager.saveProduct(token, productData);
-                if (!saved) throw new Error('Error al guardar los datos');
-                document.getElementById('generated-token').textContent = token;
+                var token = await CryptoManager.generateProductToken(product);
+                await SecureStorageManager.saveProduct(token, product);
+                document.getElementById('gen-token').textContent = token;
                 document.getElementById('token-result').style.display = 'block';
-                document.getElementById('product-form').style.display = 'none';
-            } catch (error) {
-                alert('Error: ' + error.message);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = '🔒 Guardar y Generar Token';
+                document.querySelector('#register-panel form').style.display = 'none';
+            } catch(err) {
+                alert(err.message);
             }
+            btn.disabled = false;
+            btn.textContent = 'Generar Token';
         }
-        
-        async function getFilesData() {
-            const fileInput = document.getElementById('product-file');
-            const files = [];
-            for (let file of fileInput.files) {
-                const data = await readFileAsBase64(file);
-                files.push({ name: file.name, type: file.type, size: file.size, data: data, lastModified: file.lastModified });
-            }
-            return files;
+
+        function readFile(file) {
+            return new Promise(function(resolve) {
+                var r = new FileReader();
+                r.onload = function() { resolve(r.result); };
+                r.readAsDataURL(file);
+            });
         }
-        
+
         async function verifyToken() {
-            const token = document.getElementById('access-token').value.trim();
-            const errorDiv = document.getElementById('token-error');
-            if (!token) { errorDiv.textContent = 'Ingrese un token valido'; errorDiv.style.display = 'block'; return; }
-            if (!token.startsWith('VAULT-')) { errorDiv.textContent = 'Formato de token invalido'; errorDiv.style.display = 'block'; return; }
-            errorDiv.style.display = 'none';
+            var token = document.getElementById('atoken').value.trim();
+            var errDiv = document.getElementById('token-error');
+            if (!token) { errDiv.textContent = 'Ingrese un token'; errDiv.style.display = 'block'; return; }
+            errDiv.style.display = 'none';
             try {
-                const productData = await SecureStorageManager.getProduct(token);
-                if (productData) {
-                    displayDocumentation(productData);
-                    document.getElementById('document-viewer').style.display = 'block';
+                var data = await SecureStorageManager.getProduct(token);
+                if (data) {
+                    showDocs(data);
+                    document.getElementById('doc-viewer').style.display = 'block';
                 } else {
-                    errorDiv.textContent = 'Token no encontrado o invalido';
-                    errorDiv.style.display = 'block';
+                    errDiv.textContent = 'Token no encontrado';
+                    errDiv.style.display = 'block';
                 }
-            } catch (error) {
-                errorDiv.textContent = 'Error al verificar el token';
-                errorDiv.style.display = 'block';
+            } catch(ex) {
+                errDiv.textContent = 'Error al buscar';
+                errDiv.style.display = 'block';
             }
         }
-        
-        function displayDocumentation(productData) {
-            const docContent = document.getElementById('doc-content');
-            let html = '<div class="product-info-card"><h4>' + productData.name + '</h4><p class="product-desc">' + (productData.description || 'Sin descripcion') + '</p><div class="product-meta"><span>📅 ' + productData.date + '</span><span>🕐 Registrado: ' + new Date(productData.metadata.created).toLocaleString() + '</span></div></div><div class="files-section"><h4>📎 Documentos Adjuntos (' + productData.files.length + ')</h4>';
-            if (productData.files && productData.files.length > 0) {
-                productData.files.forEach(file => {
-                    const icon = file.type.includes('pdf') ? '📕' : file.type.includes('image') ? '🖼' : '📄';
-                    html += '<div class="file-item"><div class="file-info"><span class="file-icon">' + icon + '</span><span class="file-name">' + file.name + '</span><span class="file-size">' + formatFileSize(file.size) + '</span></div><div class="file-actions">' + (file.url ? '<a href="' + file.url + '" target="_blank" class="btn-small">👁 Ver</a> <a href="' + file.url + '" download="' + file.name + '" class="btn-small">⬇ Descargar</a>' : '<a href="' + file.data + '" download="' + file.name + '" class="btn-small">⬇ Descargar</a>') + '</div></div>';
-                });
-            } else {
-                html += '<p>No hay documentos adjuntos</p>';
-            }
-            html += '</div>';
-            docContent.innerHTML = html;
+
+        function showDocs(data) {
+            var html = '<div class="doc-card"><h4>'+data.name+'</h4>';
+            if (data.description) html += '<p style="color:var(--text-dim);font-size:13px;margin-bottom:8px;">'+data.description+'</p>';
+            html += '<div class="meta"><span>📅 '+data.date+'</span><span>🕐 '+new Date(data.metadata.created).toLocaleDateString()+'</span></div></div>';
+            html += '<p style="font-size:14px;margin-bottom:10px;">Documentos ('+data.files.length+'):</p>';
+            data.files.forEach(function(f) {
+                var icon = f.type && f.type.includes('pdf') ? '📕' : f.type && f.type.includes('image') ? '🖼' : '📄';
+                var size = f.size < 1024 ? f.size+' B' : f.size < 1048576 ? (f.size/1024).toFixed(1)+' KB' : (f.size/1048576).toFixed(1)+' MB';
+                html += '<div class="file-row"><div class="info"><span>'+icon+'</span><span>'+f.name+'</span><span class="size">'+size+'</span></div><div>';
+                if (f.url) {
+                    html += '<a href="'+f.url+'" target="_blank" class="btn-small">Ver</a> ';
+                    html += '<a href="'+f.url+'" download class="btn-small">Descargar</a>';
+                } else if (f.data) {
+                    html += '<a href="'+f.data+'" download="'+f.name+'" class="btn-small">Descargar</a>';
+                }
+                html += '</div></div>';
+            });
+            document.getElementById('doc-content').innerHTML = html;
         }
-        
-        function formatFileSize(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-            return (bytes / 1048576).toFixed(1) + ' MB';
-        }
-        
+
         function copyToken() {
-            const token = document.getElementById('generated-token').textContent;
-            navigator.clipboard.writeText(token).then(() => {
-                const btn = document.querySelector('.btn-copy');
-                btn.textContent = '✅ Copiado!';
-                setTimeout(() => { btn.textContent = '📋 Copiar Token'; }, 2000);
+            var t = document.getElementById('gen-token').textContent;
+            navigator.clipboard.writeText(t).then(function() {
+                var b = document.querySelector('.btn-copy');
+                b.textContent = 'Copiado!';
+                setTimeout(function() { b.textContent = 'Copiar Token'; }, 2000);
             });
         }
-        
-        function readFileAsBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-        
-        function setupFileDropZone() {
-            const dropZone = document.getElementById('file-drop-zone');
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); });
-            });
-            ['dragenter', 'dragover'].forEach(eventName => {
-                dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'));
-            });
-            ['dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'));
-            });
-            dropZone.addEventListener('drop', e => {
-                document.getElementById('product-file').files = e.dataTransfer.files;
-                updateFilePreview(e.dataTransfer.files);
-            });
-            document.getElementById('product-file').addEventListener('change', e => updateFilePreview(e.target.files));
-        }
-        
-        function updateFilePreview(files) {
-            const preview = document.getElementById('file-preview');
-            let html = '';
-            Array.from(files).forEach(file => {
-                html += '<div class="preview-item"><span>📄</span><span>' + file.name + '</span><span>' + formatFileSize(file.size) + '</span></div>';
-            });
-            preview.innerHTML = html;
-        }
-        
+
         function logout() {
             sessionStorage.clear();
             window.location.href = 'index.html';
-        }
-        
-        function initMatrixEffect() {
-            const canvas = document.getElementById('matrix-bg');
-            const ctx = canvas.getContext('2d');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            const chars = '01';
-            const fontSize = 14;
-            const columns = canvas.width / fontSize;
-            const drops = [];
-            for (let i = 0; i < columns; i++) drops[i] = Math.random() * -100;
-            function draw() {
-                ctx.fillStyle = 'rgba(10, 10, 10, 0.05)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#0F0';
-                ctx.font = fontSize + 'px monospace';
-                for (let i = 0; i < drops.length; i++) {
-                    const text = chars[Math.floor(Math.random() * chars.length)];
-                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
-                    drops[i]++;
-                }
-            }
-            setInterval(draw, 33);
         }
     </script>
 </body>
