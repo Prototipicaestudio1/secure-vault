@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Vault - Panel</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <canvas id="matrix-bg"></canvas>
+    <div class="container">
+        <div class="vault-panel">
+            <div class="vault-header">
+                <h1>🔐 SECURE VAULT</h1>
+                <div class="header-actions">
+                    <span id="session-timer" class="session-timer"></span>
+                    <button onclick="logout()" class="btn-logout">⏻ CERRAR</button>
+                </div>
+            </div>
+            
+            <div id="main-menu" class="vault-options">
+                <div class="option-card" onclick="showRegister()">
+                    <div class="option-icon">📝</div>
+                    <h3>Registrar Producto</h3>
+                    <p>Crear nuevo registro con documentacion encriptada</p>
+                </div>
+                <div class="option-card" onclick="showTokenInput()">
+                    <div class="option-icon">🔑</div>
+                    <h3>Ingresar Token</h3>
+                    <p>Acceder a documentacion mediante token seguro</p>
+                </div>
+            </div>
+            
+            <div id="register-panel" class="sub-panel" style="display:none;">
+                <h2>📝 Registrar Nuevo Producto</h2>
+                <form id="product-form" onsubmit="registerProduct(event)">
+                    <div class="form-group">
+                        <label>Nombre del Producto *</label>
+                        <input type="text" id="product-name" required maxlength="100" placeholder="Nombre del producto">
+                    </div>
+                    <div class="form-group">
+                        <label>Descripcion</label>
+                        <textarea id="product-desc" rows="3" maxlength="500" placeholder="Descripcion opcional"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Documentacion * (max 10MB por archivo)</label>
+                        <div class="file-upload-area" id="file-drop-zone">
+                            <input type="file" id="product-file" multiple style="display:none" accept=".pdf,.doc,.docx,.txt,.jpg,.png,.zip">
+                            <div class="upload-placeholder" onclick="document.getElementById('product-file').click()">
+                                <span>📁</span>
+                                <p>Click para seleccionar archivos</p>
+                                <p class="small">o arrastra y suelta aqui</p>
+                            </div>
+                        </div>
+                        <div id="file-preview" class="file-preview"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha *</label>
+                        <input type="date" id="product-date" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary" id="submit-btn">🔒 Guardar y Generar Token</button>
+                        <button type="button" onclick="showMainMenu()" class="btn-secondary">← Cancelar</button>
+                    </div>
+                </form>
+                
+                <div id="token-result" style="display:none;" class="token-result-panel">
+                    <div class="success-icon">✅</div>
+                    <h3>Producto Registrado Exitosamente</h3>
+                    <div class="token-display">
+                        <p>Token de Acceso Unico:</p>
+                        <code id="generated-token"></code>
+                        <button onclick="copyToken()" class="btn-copy">📋 Copiar Token</button>
+                    </div>
+                    <div class="warning-box">
+                        <p>⚠️ <strong>IMPORTANTE:</strong> Este token es la UNICA forma de acceder a la documentacion.</p>
+                        <p>Guardelo de forma segura. No podra ser recuperado.</p>
+                    </div>
+                    <button onclick="showMainMenu()" class="btn-primary">Volver al Menu</button>
+                </div>
+            </div>
+            
+            <div id="token-panel" class="sub-panel" style="display:none;">
+                <h2>🔑 Ingresar Token de Acceso</h2>
+                <div class="token-input-group">
+                    <input type="text" id="access-token" placeholder="Ingrese el token (VAULT-XXXX-XXXX-XXXX)" autocomplete="off">
+                    <button onclick="verifyToken()" class="btn-primary">🔍 Verificar</button>
+                </div>
+                <div id="token-error" class="token-error" style="display:none;"></div>
+                
+                <div id="document-viewer" style="display:none;" class="document-viewer">
+                    <div class="doc-header">
+                        <h3>📄 Documentacion Recuperada</h3>
+                        <span class="verified-badge">✓ Token Verificado</span>
+                    </div>
+                    <div id="doc-content"></div>
+                    <button onclick="showMainMenu()" class="btn-secondary">← Volver</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/crypto.js"></script>
+    <script src="js/security.js"></script>
+    <script src="js/storage.js"></script>
+    <script>
+        function checkSession() {
+            const session = sessionStorage.getItem('secure_session');
+            const expiry = parseInt(sessionStorage.getItem('session_expiry') || '0');
+            if (!session || Date.now() > expiry) {
+                sessionStorage.clear();
+                window.location.href = 'index.html';
+                return false;
+            }
+            return true;
+        }
+        
+        if (!checkSession()) throw new Error('Acceso no autorizado');
+        
+        const SESSION_DURATION = 1800000;
+        const SESSION_WARNING = 300000;
+        let inactivityTimer;
+        
+        function initSession() {
+            updateSessionTimer();
+            resetInactivityTimer();
+            ['mousemove', 'keypress', 'click', 'scroll', 'touchstart'].forEach(event => {
+                document.addEventListener(event, resetInactivityTimer);
+            });
+        }
+        
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(logout, SESSION_DURATION);
+            sessionStorage.setItem('session_expiry', Date.now() + SESSION_DURATION);
+            updateSessionTimer();
+        }
+        
+        function updateSessionTimer() {
+            const expiry = parseInt(sessionStorage.getItem('session_expiry') || '0');
+            const remaining = Math.max(0, expiry - Date.now());
+            const minutes = Math.floor(remaining / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            const timer = document.getElementById('session-timer');
+            timer.textContent = '⏱ ' + minutes + ':' + seconds.toString().padStart(2, '0');
+            if (remaining < SESSION_WARNING && remaining > 0) timer.className = 'session-timer warning';
+            else timer.className = 'session-timer';
+        }
+        
+        setInterval(updateSessionTimer, 1000);
+        initSession();
+        initMatrixEffect();
+        setupFileDropZone();
+        
+        function showRegister() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('register-panel').style.display = 'block';
+            document.getElementById('token-panel').style.display = 'none';
+            document.getElementById('token-result').style.display = 'none';
+            document.getElementById('product-form').style.display = 'block';
+            document.getElementById('product-form').reset();
+            document.getElementById('file-preview').innerHTML = '';
+        }
+        
+        function showTokenInput() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('token-panel').style.display = 'block';
+            document.getElementById('register-panel').style.display = 'none';
+            document.getElementById('document-viewer').style.display = 'none';
+            document.getElementById('token-error').style.display = 'none';
+            document.getElementById('access-token').value = '';
+        }
+        
+        function showMainMenu() {
+            document.getElementById('main-menu').style.display = 'grid';
+            document.getElementById('register-panel').style.display = 'none';
+            document.getElementById('token-panel').style.display = 'none';
+        }
+        
+        async function registerProduct(event) {
+            event.preventDefault();
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Procesando...';
+            try {
+                const productData = {
+                    name: document.getElementById('product-name').value.replace(/[<>]/g, ''),
+                    description: document.getElementById('product-desc').value.replace(/[<>]/g, ''),
+                    date: document.getElementById('product-date').value,
+                    files: await getFilesData(),
+                    metadata: {
+                        created: new Date().toISOString(),
+                        version: '3.0'
+                    }
+                };
+                if (productData.files.some(f => f.size > 10 * 1024 * 1024)) {
+                    throw new Error('Los archivos no deben superar 10MB');
+                }
+                const token = await CryptoManager.generateProductToken(productData);
+                const saved = await SecureStorageManager.saveProduct(token, productData);
+                if (!saved) throw new Error('Error al guardar los datos');
+                document.getElementById('generated-token').textContent = token;
+                document.getElementById('token-result').style.display = 'block';
+                document.getElementById('product-form').style.display = 'none';
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🔒 Guardar y Generar Token';
+            }
+        }
+        
+        async function getFilesData() {
+            const fileInput = document.getElementById('product-file');
+            const files = [];
+            for (let file of fileInput.files) {
+                const data = await readFileAsBase64(file);
+                files.push({ name: file.name, type: file.type, size: file.size, data: data, lastModified: file.lastModified });
+            }
+            return files;
+        }
+        
+        async function verifyToken() {
+            const token = document.getElementById('access-token').value.trim();
+            const errorDiv = document.getElementById('token-error');
+            if (!token) { errorDiv.textContent = 'Ingrese un token valido'; errorDiv.style.display = 'block'; return; }
+            if (!token.startsWith('VAULT-')) { errorDiv.textContent = 'Formato de token invalido'; errorDiv.style.display = 'block'; return; }
+            errorDiv.style.display = 'none';
+            try {
+                const productData = await SecureStorageManager.getProduct(token);
+                if (productData) {
+                    displayDocumentation(productData);
+                    document.getElementById('document-viewer').style.display = 'block';
+                } else {
+                    errorDiv.textContent = 'Token no encontrado o invalido';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Error al verificar el token';
+                errorDiv.style.display = 'block';
+            }
+        }
+        
+        function displayDocumentation(productData) {
+            const docContent = document.getElementById('doc-content');
+            let html = '<div class="product-info-card"><h4>' + productData.name + '</h4><p class="product-desc">' + (productData.description || 'Sin descripcion') + '</p><div class="product-meta"><span>📅 ' + productData.date + '</span><span>🕐 Registrado: ' + new Date(productData.metadata.created).toLocaleString() + '</span></div></div><div class="files-section"><h4>📎 Documentos Adjuntos (' + productData.files.length + ')</h4>';
+            if (productData.files && productData.files.length > 0) {
+                productData.files.forEach(file => {
+                    const icon = file.type.includes('pdf') ? '📕' : file.type.includes('image') ? '🖼' : '📄';
+                    html += '<div class="file-item"><div class="file-info"><span class="file-icon">' + icon + '</span><span class="file-name">' + file.name + '</span><span class="file-size">' + formatFileSize(file.size) + '</span></div><div class="file-actions">' + (file.url ? '<a href="' + file.url + '" target="_blank" class="btn-small">👁 Ver</a> <a href="' + file.url + '" download="' + file.name + '" class="btn-small">⬇ Descargar</a>' : '<a href="' + file.data + '" download="' + file.name + '" class="btn-small">⬇ Descargar</a>') + '</div></div>';
+                });
+            } else {
+                html += '<p>No hay documentos adjuntos</p>';
+            }
+            html += '</div>';
+            docContent.innerHTML = html;
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+        
+        function copyToken() {
+            const token = document.getElementById('generated-token').textContent;
+            navigator.clipboard.writeText(token).then(() => {
+                const btn = document.querySelector('.btn-copy');
+                btn.textContent = '✅ Copiado!';
+                setTimeout(() => { btn.textContent = '📋 Copiar Token'; }, 2000);
+            });
+        }
+        
+        function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        function setupFileDropZone() {
+            const dropZone = document.getElementById('file-drop-zone');
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); });
+            });
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'));
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'));
+            });
+            dropZone.addEventListener('drop', e => {
+                document.getElementById('product-file').files = e.dataTransfer.files;
+                updateFilePreview(e.dataTransfer.files);
+            });
+            document.getElementById('product-file').addEventListener('change', e => updateFilePreview(e.target.files));
+        }
+        
+        function updateFilePreview(files) {
+            const preview = document.getElementById('file-preview');
+            let html = '';
+            Array.from(files).forEach(file => {
+                html += '<div class="preview-item"><span>📄</span><span>' + file.name + '</span><span>' + formatFileSize(file.size) + '</span></div>';
+            });
+            preview.innerHTML = html;
+        }
+        
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = 'index.html';
+        }
+        
+        function initMatrixEffect() {
+            const canvas = document.getElementById('matrix-bg');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const chars = '01';
+            const fontSize = 14;
+            const columns = canvas.width / fontSize;
+            const drops = [];
+            for (let i = 0; i < columns; i++) drops[i] = Math.random() * -100;
+            function draw() {
+                ctx.fillStyle = 'rgba(10, 10, 10, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#0F0';
+                ctx.font = fontSize + 'px monospace';
+                for (let i = 0; i < drops.length; i++) {
+                    const text = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                    drops[i]++;
+                }
+            }
+            setInterval(draw, 33);
+        }
+    </script>
+</body>
+</html>

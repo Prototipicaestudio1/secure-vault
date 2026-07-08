@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Vault - Acceso Restringido</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <canvas id="matrix-bg"></canvas>
+    <div class="container">
+        <div class="login-panel">
+            <div class="logo">
+                <span class="logo-icon">🔐</span>
+                <span class="logo-text">SECURE VAULT</span>
+                <span class="logo-version">v3.0</span>
+            </div>
+            
+            <div id="attempt-counter" class="attempt-display"></div>
+            
+            <div class="input-wrapper">
+                <input type="password" 
+                       id="master-code" 
+                       class="code-input" 
+                       placeholder="••••••••" 
+                       maxlength="16"
+                       autocomplete="off"
+                       readonly
+                       onfocus="this.removeAttribute('readonly')">
+                <div class="security-indicator" id="security-indicator"></div>
+            </div>
+            
+            <div class="keypad" id="keypad"></div>
+            
+            <div id="security-alert"></div>
+        </div>
+    </div>
+    
+    <script src="js/crypto.js"></script>
+    <script src="js/security.js"></script>
+    <script>
+        const SECURITY_CONFIG = {
+            MAX_ATTEMPTS: 3,
+            LOCKOUT_TIME: 300000,
+            SESSION_DURATION: 1800000,
+            CODE_MIN_LENGTH: 8,
+            CODE_HASH: 'REEMPLAZAR_CON_TU_HASH'
+        };
+        
+        let attempts = SecurityManager.getAttempts();
+        let lockoutUntil = SecurityManager.getLockout();
+        
+        generateRandomKeypad();
+        updateAttemptDisplay();
+        checkLockout();
+        initMatrixEffect();
+        
+        function generateRandomKeypad() {
+            const keypad = document.getElementById('keypad');
+            const digits = ['1','2','3','4','5','6','7','8','9','0'];
+            for (let i = digits.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [digits[i], digits[j]] = [digits[j], digits[i]];
+            }
+            keypad.innerHTML = '';
+            digits.forEach(digit => {
+                const btn = document.createElement('button');
+                btn.textContent = digit;
+                btn.onclick = () => addDigit(digit);
+                keypad.appendChild(btn);
+            });
+            const clearBtn = document.createElement('button');
+            clearBtn.textContent = '⌫';
+            clearBtn.className = 'special-btn';
+            clearBtn.onclick = clearCode;
+            keypad.appendChild(clearBtn);
+            const verifyBtn = document.createElement('button');
+            verifyBtn.textContent = '✓';
+            verifyBtn.className = 'special-btn verify-btn';
+            verifyBtn.onclick = verifyCode;
+            keypad.appendChild(verifyBtn);
+        }
+        
+        function addDigit(digit) {
+            if (Date.now() < lockoutUntil) {
+                showAlert('SISTEMA BLOQUEADO', 'error');
+                return;
+            }
+            const input = document.getElementById('master-code');
+            if (input.value.length < 16) {
+                input.value += digit;
+                updateSecurityIndicator();
+                if (input.value.length >= SECURITY_CONFIG.CODE_MIN_LENGTH) {
+                    document.querySelector('.verify-btn').style.background = 'var(--accent)';
+                }
+            }
+        }
+        
+        function clearCode() {
+            document.getElementById('master-code').value = '';
+            updateSecurityIndicator();
+            document.querySelector('.verify-btn').style.background = '';
+        }
+        
+        async function verifyCode() {
+            if (Date.now() < lockoutUntil) {
+                const remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
+                showAlert('Sistema bloqueado. Espere ' + remaining + 's', 'error');
+                return;
+            }
+            const code = document.getElementById('master-code').value;
+            if (code.length < SECURITY_CONFIG.CODE_MIN_LENGTH) {
+                showAlert('Codigo demasiado corto', 'error');
+                return;
+            }
+            document.querySelector('.verify-btn').textContent = '...';
+            try {
+                const hashedCode = await CryptoManager.hashString(code, 1000);
+                const isValid = await CryptoManager.timingSafeCompare(hashedCode, SECURITY_CONFIG.CODE_HASH);
+                if (isValid) {
+                    SecurityManager.grantAccess();
+                    showAlert('Acceso concedido', 'success');
+                    setTimeout(() => { window.location.href = 'vault.html'; }, 500);
+                } else {
+                    attempts = SecurityManager.incrementAttempts();
+                    if (attempts >= SECURITY_CONFIG.MAX_ATTEMPTS) {
+                        SecurityManager.lockout();
+                        lockoutUntil = SecurityManager.getLockout();
+                        showAlert('ACCESO BLOQUEADO. Demasiados intentos', 'error');
+                        document.body.style.animation = 'alarm 0.5s 3';
+                        setTimeout(() => { document.body.style.animation = ''; }, 1500);
+                    } else {
+                        showAlert('Codigo incorrecto. ' + (SECURITY_CONFIG.MAX_ATTEMPTS - attempts) + ' intentos restantes', 'error');
+                    }
+                    document.getElementById('master-code').value = '';
+                    updateSecurityIndicator();
+                    generateRandomKeypad();
+                }
+            } catch (error) {
+                showAlert('Error de seguridad', 'error');
+            }
+            document.querySelector('.verify-btn').textContent = '✓';
+            document.querySelector('.verify-btn').style.background = '';
+            updateAttemptDisplay();
+        }
+        
+        function updateSecurityIndicator() {
+            const input = document.getElementById('master-code');
+            const indicator = document.getElementById('security-indicator');
+            const length = input.value.length;
+            if (length === 0) indicator.className = 'security-indicator';
+            else if (length < 4) indicator.className = 'security-indicator weak';
+            else if (length < 8) indicator.className = 'security-indicator medium';
+            else indicator.className = 'security-indicator strong';
+        }
+        
+        function updateAttemptDisplay() {
+            const display = document.getElementById('attempt-counter');
+            if (attempts > 0) {
+                display.innerHTML = 'Intentos: ' + attempts + '/' + SECURITY_CONFIG.MAX_ATTEMPTS;
+                display.className = attempts >= 2 ? 'attempt-display danger' : 'attempt-display';
+            } else {
+                display.innerHTML = '';
+            }
+        }
+        
+        function checkLockout() {
+            if (Date.now() < lockoutUntil) {
+                document.getElementById('keypad').style.pointerEvents = 'none';
+                document.getElementById('keypad').style.opacity = '0.5';
+                const countdown = setInterval(() => {
+                    const remaining = Math.ceil((lockoutUntil - Date.now()) / 1000);
+                    if (remaining <= 0) {
+                        clearInterval(countdown);
+                        document.getElementById('keypad').style.pointerEvents = '';
+                        document.getElementById('keypad').style.opacity = '1';
+                        document.getElementById('security-alert').innerHTML = '';
+                        SecurityManager.resetAttempts();
+                        attempts = 0;
+                        updateAttemptDisplay();
+                    } else {
+                        showAlert('Sistema bloqueado. Espere ' + remaining + 's', 'error');
+                    }
+                }, 1000);
+            }
+        }
+        
+        function showAlert(message, type) {
+            const alert = document.getElementById('security-alert');
+            alert.textContent = message;
+            alert.className = type;
+            alert.style.display = 'block';
+            if (type === 'success') setTimeout(() => { alert.style.display = 'none'; }, 2000);
+        }
+        
+        function initMatrixEffect() {
+            const canvas = document.getElementById('matrix-bg');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const chars = '01';
+            const fontSize = 14;
+            const columns = canvas.width / fontSize;
+            const drops = [];
+            for (let i = 0; i < columns; i++) drops[i] = Math.random() * -100;
+            function draw() {
+                ctx.fillStyle = 'rgba(10, 10, 10, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#0F0';
+                ctx.font = fontSize + 'px monospace';
+                for (let i = 0; i < drops.length; i++) {
+                    const text = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                    drops[i]++;
+                }
+            }
+            setInterval(draw, 33);
+        }
+    </script>
+</body>
+</html>
