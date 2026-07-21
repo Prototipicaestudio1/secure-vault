@@ -3,322 +3,271 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel Seguro</title>
+    <title>Secure Vault - Panel</title>
     <meta name="robots" content="noindex, nofollow">
-    <style>
-        :root {
-            --bg: #0f0f0f;
-            --card: #1a1a1a;
-            --border: #2a2a2a;
-            --text: #e0e0e0;
-            --text-dim: #888;
-            --accent: #ffffff;
-            --green: #00cc66;
-            --error: #ff4444;
-            --warn: #ffaa00;
-            --radius: 16px;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .container { width: 100%; max-width: 500px; padding: 20px; }
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 32px 24px;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 28px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--border);
-        }
-        .header h1 { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .header h1 span { font-size: 22px; }
-        .logout {
-            background: none;
-            border: 1px solid var(--border);
-            color: var(--text-dim);
-            padding: 8px 14px;
-            border-radius: 8px;
-            font-size: 13px;
-            cursor: pointer;
-            font-family: inherit;
-        }
-        .logout:active { background: #222; }
-        .menu {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-        .menu-btn {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 24px 16px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-family: inherit;
-            color: var(--text);
-        }
-        .menu-btn:active { background: #222; transform: scale(0.97); }
-        .menu-btn .icon { font-size: 32px; display: block; margin-bottom: 10px; }
-        .menu-btn .title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
-        .menu-btn .desc { font-size: 12px; color: var(--text-dim); }
-        .panel { display: none; animation: fade 0.25s ease; }
-        @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .panel h2 { font-size: 18px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-        .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 6px; font-weight: 500; }
-        .form-group input, .form-group textarea {
-            width: 100%; padding: 12px 14px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text);
-            font-size: 14px;
-            font-family: inherit;
-            outline: none;
-            resize: vertical;
-        }
-        .form-group input:focus, .form-group textarea:focus { border-color: #555; }
-        .file-zone {
-            border: 2px dashed var(--border);
-            border-radius: 10px;
-            padding: 28px;
-            text-align: center;
-            cursor: pointer;
-            background: var(--bg);
-            transition: border 0.2s;
-        }
-        .file-zone:active { border-color: #555; }
-        .file-zone span { font-size: 28px; display: block; margin-bottom: 6px; }
-        .file-zone p { font-size: 13px; color: var(--text-dim); }
-        .file-list { margin-top: 10px; }
-        .file-item {
-            display: flex; align-items: center; gap: 8px;
-            padding: 8px 10px; background: var(--bg);
-            border: 1px solid var(--border); border-radius: 8px;
-            margin-bottom: 6px; font-size: 13px;
-        }
-        .file-item span:last-child { color: var(--text-dim); font-size: 11px; margin-left: auto; }
-        .actions { display: flex; gap: 8px; margin-top: 20px; }
-        .btn {
-            padding: 12px 20px; border-radius: 10px;
-            font-size: 14px; font-weight: 600; cursor: pointer;
-            font-family: inherit; border: none; transition: all 0.2s;
-        }
-        .btn:active { transform: scale(0.96); }
-        .btn-primary { background: var(--accent); color: var(--bg); flex: 1; }
-        .btn-primary:active { background: #ddd; }
-        .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
-        .btn-small {
-            padding: 6px 12px; border-radius: 6px; font-size: 12px;
-            background: var(--bg); color: var(--text);
-            border: 1px solid var(--border); cursor: pointer;
-            text-decoration: none; font-family: inherit;
-        }
-        .btn-copy {
-            padding: 8px 16px; border-radius: 8px; font-size: 13px;
-            background: var(--bg); color: var(--text);
-            border: 1px solid var(--border); cursor: pointer;
-            font-family: inherit; margin-top: 8px;
-        }
-        .token-box {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 20px; margin: 16px 0;
-            text-align: center;
-        }
-        .token-box code {
-            display: block; font-size: 15px; color: var(--text);
-            letter-spacing: 1px; margin: 8px 0; word-break: break-all;
-            user-select: all;
-        }
-        .warn-box {
-            background: rgba(255,170,0,0.08);
-            border: 1px solid rgba(255,170,0,0.2);
-            border-radius: 10px; padding: 14px;
-            margin: 16px 0; font-size: 12px; color: var(--warn);
-        }
-        .token-input {
-            display: flex; gap: 8px; margin-bottom: 14px;
-        }
-        .token-input input {
-            flex: 1; padding: 12px 14px;
-            background: var(--bg); border: 1px solid var(--border);
-            border-radius: 10px; color: var(--text);
-            font-size: 14px; font-family: inherit; outline: none;
-        }
-        .token-error {
-            background: rgba(255,68,68,0.08);
-            border: 1px solid rgba(255,68,68,0.2);
-            color: var(--error); padding: 10px; border-radius: 8px;
-            font-size: 13px; margin-bottom: 12px; display: none;
-        }
-        .doc-card {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 10px; padding: 16px; margin-bottom: 12px;
-        }
-        .doc-card h4 { font-size: 15px; margin-bottom: 6px; }
-        .doc-card .meta { font-size: 12px; color: var(--text-dim); margin-bottom: 12px; display: flex; gap: 12px; }
-        .file-row {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 10px; background: var(--card);
-            border: 1px solid var(--border); border-radius: 8px;
-            margin-bottom: 6px; gap: 8px; flex-wrap: wrap;
-        }
-        .file-row .info { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-        .file-row .info .size { color: var(--text-dim); font-size: 11px; }
-        .success-icon { font-size: 48px; text-align: center; margin-bottom: 12px; }
-        .center { text-align: center; }
-        .badge {
-            display: inline-block; padding: 4px 10px;
-            background: rgba(0,204,102,0.1); color: var(--green);
-            border: 1px solid rgba(0,204,102,0.2);
-            border-radius: 20px; font-size: 11px;
-        }
-    </style>
+    <link rel="stylesheet" href="css/vault.css">
 </head>
 <body>
-    <div class="container">
-        <div class="card" id="main-card">
-            <div class="header">
-                <h1><span>🔐</span> Panel Seguro</h1>
-                <button class="logout" onclick="logout()">Salir</button>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><span>🔐</span> Secure Vault</div>
+            </div>
+            <nav>
+                <button class="nav-btn active" data-view="dashboard">📊 Dashboard</button>
+                <button class="nav-btn" data-view="register">📝 Nuevo Registro</button>
+                <button class="nav-btn" data-view="consult">🔍 Consultar Token</button>
+                <button class="nav-btn" data-view="vault">🗄 Mi Boveda</button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="storage-bar"><div class="storage-fill" id="storage-fill"></div></div>
+                <span id="storage-text">0 MB usado</span>
+                <button class="logout-btn" onclick="logout()">⏻ Cerrar Sesion</button>
+            </div>
+        </aside>
+
+        <main class="main">
+            <header class="topbar">
+                <button class="menu-toggle" id="menu-toggle">☰</button>
+                <div class="search-box"><span>🔍</span><input type="text" id="search-input" placeholder="Buscar en tu boveda..."></div>
+                <span class="badge" id="session-badge">● Activo</span>
+            </header>
+
+            <!-- Dashboard -->
+            <div class="view active" id="view-dashboard">
+                <div class="stats-grid">
+                    <div class="stat-card"><span class="stat-icon">📄</span><div><span class="stat-value" id="stat-total">0</span><span class="stat-label">Documentos</span></div></div>
+                    <div class="stat-card"><span class="stat-icon">🖼</span><div><span class="stat-value" id="stat-images">0</span><span class="stat-label">Imagenes</span></div></div>
+                    <div class="stat-card"><span class="stat-icon">🎬</span><div><span class="stat-value" id="stat-videos">0</span><span class="stat-label">Videos</span></div></div>
+                    <div class="stat-card"><span class="stat-icon">📦</span><div><span class="stat-value" id="stat-archives">0</span><span class="stat-label">Archivos</span></div></div>
+                </div>
+                <div class="section"><h3>🕐 Actividad Reciente</h3><div id="recent-activity"></div></div>
             </div>
 
-            <div id="menu" class="menu">
-                <div class="menu-btn" onclick="showRegister()">
-                    <span class="icon">📝</span>
-                    <div class="title">Registrar</div>
-                    <div class="desc">Nuevo producto y documentos</div>
-                </div>
-                <div class="menu-btn" onclick="showToken()">
-                    <span class="icon">🔑</span>
-                    <div class="title">Consultar</div>
-                    <div class="desc">Ver documentos por token</div>
-                </div>
-            </div>
-
-            <div id="register-panel" class="panel">
-                <h2>📝 Registrar Producto</h2>
-                <form onsubmit="registerProduct(event)">
-                    <div class="form-group">
-                        <label>Nombre del producto *</label>
-                        <input type="text" id="pname" required maxlength="100" placeholder="Ej: Contrato importante">
-                    </div>
-                    <div class="form-group">
-                        <label>Descripcion</label>
-                        <textarea id="pdesc" rows="2" maxlength="300" placeholder="Opcional"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Documentos * (max 10MB)</label>
-                        <div class="file-zone" onclick="document.getElementById('pfile').click()">
-                            <span>📁</span>
-                            <p>Seleccionar archivos</p>
+            <!-- Registro -->
+            <div class="view" id="view-register">
+                <div class="form-container">
+                    <h2>📝 Nuevo Registro</h2>
+                    <form id="register-form" onsubmit="registerProduct(event)">
+                        <div class="form-row">
+                            <div class="form-group"><label>Nombre *</label><input type="text" id="pname" required maxlength="100" placeholder="Ej: Contrato 2024"></div>
+                            <div class="form-group"><label>Fecha *</label><input type="date" id="pdate" required></div>
                         </div>
-                        <input type="file" id="pfile" multiple style="display:none" accept=".pdf,.doc,.docx,.txt,.jpg,.png,.zip">
-                        <div class="file-list" id="file-preview"></div>
-                    </div>
-                    <div class="form-group">
-                        <label>Fecha *</label>
-                        <input type="date" id="pdate" required>
-                    </div>
-                    <div class="actions">
-                        <button type="submit" class="btn btn-primary" id="submit-btn">Generar Token</button>
-                        <button type="button" class="btn btn-secondary" onclick="showMenu()">Cancelar</button>
-                    </div>
-                </form>
+                        <div class="form-group"><label>Categoria</label><select id="pcategory"><option value="general">📁 General</option><option value="legal">⚖️ Legal</option><option value="financiero">💰 Financiero</option><option value="medico">🏥 Medico</option><option value="personal">👤 Personal</option></select></div>
+                        <div class="form-group"><label>Descripcion</label><textarea id="pdesc" rows="3" maxlength="500" placeholder="Notas..."></textarea></div>
+                        <div class="form-group"><label>Etiquetas</label><input type="text" id="ptags" placeholder="importante, urgente"></div>
 
-                <div id="token-result" style="display:none;">
-                    <div class="success-icon">✅</div>
-                    <h3 style="text-align:center;">Producto Registrado</h3>
-                    <div class="token-box">
-                        <p style="color:var(--text-dim);font-size:13px;">Token de acceso:</p>
-                        <code id="gen-token"></code>
-                        <button class="btn-copy" onclick="copyToken()">Copiar Token</button>
+                        <!-- Zona de archivos -->
+                        <div class="form-group">
+                            <label>Archivos (max 25MB c/u)</label>
+                            <div class="dropzone" id="dropzone">
+                                <div class="dropzone-content"><span>📁</span><p>Arrastra archivos aqui o haz click</p><p class="small">PDF, Imagenes, Videos, ZIP, RAR, Docs</p></div>
+                                <input type="file" id="pfile" multiple style="display:none" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.webp,.mp4,.mov,.avi,.zip,.rar,.7z">
+                            </div>
+                            <div class="file-list" id="file-preview"></div>
+                        </div>
+
+                        <!-- Links -->
+                        <div class="form-group">
+                            <label>Links de referencia</label>
+                            <div id="links-container">
+                                <div class="link-row"><input type="url" class="link-input" placeholder="https://..."><button type="button" class="btn-icon" onclick="this.parentElement.remove()">✕</button></div>
+                            </div>
+                            <button type="button" class="btn-add" onclick="addLink()">+ Agregar link</button>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary" id="submit-btn">🔒 Generar Token</button>
+                            <button type="button" class="btn-secondary" onclick="showView('dashboard')">Cancelar</button>
+                        </div>
+                    </form>
+
+                    <div id="token-result" class="result-card" style="display:none;">
+                        <div class="success-icon">✅</div>
+                        <h3>Registro Exitoso</h3>
+                        <div class="token-box"><p>Token de Acceso:</p><code id="gen-token"></code><button onclick="copyToken()">📋 Copiar</button></div>
+                        <div class="warn-box">⚠️ Guarde este token. Es la unica forma de acceder.</div>
+                        <button class="btn-primary" onclick="showView('dashboard')">Volver</button>
                     </div>
-                    <div class="warn-box">
-                        ⚠️ Guarde este token. Es la unica forma de acceder a los documentos.
-                    </div>
-                    <button class="btn btn-primary" onclick="showMenu()" style="width:100%;">Volver</button>
                 </div>
             </div>
 
-            <div id="token-panel" class="panel">
-                <h2>🔑 Consultar Documentos</h2>
-                <div class="token-input">
-                    <input type="text" id="atoken" placeholder="Token VAULT-XXXX-XXXX-XXXX">
-                    <button class="btn btn-primary" onclick="verifyToken()" style="flex:0;">Buscar</button>
-                </div>
-                <div class="token-error" id="token-error"></div>
-                <div id="doc-viewer" style="display:none;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-                        <h3 style="font-size:16px;">📄 Resultado</h3>
-                        <span class="badge">✓ Verificado</span>
+            <!-- Consultar Token -->
+            <div class="view" id="view-consult">
+                <div class="form-container">
+                    <h2>🔍 Consultar Documentos</h2>
+                    <div class="token-search">
+                        <input type="text" id="atoken" placeholder="Token VAULT-XXXX-XXXX-XXXX">
+                        <button class="btn-primary" onclick="verifyToken()">Buscar</button>
                     </div>
-                    <div id="doc-content"></div>
-                    <button class="btn btn-secondary" onclick="showMenu()" style="margin-top:12px;">← Volver</button>
+                    <div class="token-error" id="token-error"></div>
+                    <div id="doc-viewer" style="display:none;">
+                        <div class="doc-header-bar"><h3>📄 Resultado</h3><span class="verified-badge">✓ Verificado</span></div>
+                        <div id="doc-content"></div>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <!-- Mi Boveda -->
+            <div class="view" id="view-vault">
+                <div class="section-header"><h2>🗄 Mi Boveda</h2><div class="filter-bar"><select id="filter-category"><option value="all">Todas</option><option value="general">📁 General</option><option value="legal">⚖️ Legal</option><option value="financiero">💰 Financiero</option><option value="medico">🏥 Medico</option><option value="personal">👤 Personal</option></select><select id="filter-type"><option value="all">Todos</option><option value="document">📄 Documentos</option><option value="image">🖼 Imagenes</option><option value="video">🎬 Videos</option><option value="archive">📦 Archivos</option></select></div></div>
+                <div id="vault-items" class="vault-grid"></div>
+            </div>
+        </main>
     </div>
 
     <script src="js/cripto.js"></script>
     <script src="js/security.js"></script>
     <script src="js/storage.js"></script>
+    <script src="js/preview.js"></script>
+    <script src="js/organizer.js"></script>
     <script>
         if (!sessionStorage.getItem('secure_session') || Date.now() > parseInt(sessionStorage.getItem('session_expiry')||'0')) {
             window.location.href = 'index.html';
         }
 
-        document.getElementById('pfile').addEventListener('change', function(e) {
+        var vaultItems = {};
+        var currentView = 'dashboard';
+        var inactivityTimer;
+
+        initApp();
+
+        function initApp() {
+            loadVault();
+            setupDropzone();
+            setupNavigation();
+            setupSearch();
+            resetInactivityTimer();
+            ['mousemove','keypress','click','touchstart'].forEach(function(e) {
+                document.addEventListener(e, resetInactivityTimer);
+            });
+            setInterval(updateStats, 30000);
+            updateStats();
+            updateStorageInfo();
+        }
+
+        function setupNavigation() {
+            document.querySelectorAll('.nav-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    showView(this.dataset.view);
+                });
+            });
+            document.getElementById('menu-toggle').addEventListener('click', function() {
+                document.getElementById('sidebar').classList.toggle('open');
+            });
+        }
+
+        function showView(view) {
+            currentView = view;
+            document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+            document.getElementById('view-' + view).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
+            var btn = document.querySelector('[data-view="' + view + '"]');
+            if (btn) btn.classList.add('active');
+            document.getElementById('sidebar').classList.remove('open');
+            if (view === 'vault') renderVault();
+            if (view === 'dashboard') { updateStats(); loadRecentActivity(); }
+        }
+
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(logout, 1800000);
+            sessionStorage.setItem('session_expiry', Date.now() + 1800000);
+        }
+
+        function loadVault() {
+            try {
+                var data = localStorage.getItem('secure_vault_products');
+                vaultItems = data ? JSON.parse(data) : {};
+            } catch(e) { vaultItems = {}; }
+        }
+
+        function updateStats() {
+            var total = 0, images = 0, videos = 0, archives = 0;
+            Object.values(vaultItems).forEach(function(item) {
+                try {
+                    var d = item.encrypted ? item : { encrypted: item };
+                    total++;
+                } catch(e) { total++; }
+            });
+            document.getElementById('stat-total').textContent = Object.keys(vaultItems).length;
+            document.getElementById('stat-images').textContent = images || '0';
+            document.getElementById('stat-videos').textContent = videos || '0';
+            document.getElementById('stat-archives').textContent = archives || '0';
+            updateStorageInfo();
+        }
+
+        function updateStorageInfo() {
+            var used = new Blob([JSON.stringify(vaultItems)]).size;
+            var mb = (used / 1048576).toFixed(2);
+            var pct = Math.min(100, (used / 26843545600) * 100).toFixed(1);
+            document.getElementById('storage-fill').style.width = pct + '%';
+            document.getElementById('storage-text').textContent = mb + ' MB usado';
+        }
+
+        function loadRecentActivity() {
             var html = '';
-            Array.from(e.target.files).forEach(function(f) {
-                var size = f.size < 1024 ? f.size + ' B' : f.size < 1048576 ? (f.size/1024).toFixed(1) + ' KB' : (f.size/1048576).toFixed(1) + ' MB';
-                html += '<div class="file-item"><span>📄</span><span>'+f.name+'</span><span>'+size+'</span></div>';
+            var items = Object.entries(vaultItems).slice(-5).reverse();
+            items.forEach(function(_ref) {
+                var token = _ref[0];
+                var item = _ref[1];
+                var d = item.encrypted ? { timestamp: item.timestamp } : item;
+                var date = d.timestamp ? new Date(d.timestamp).toLocaleString() : 'Desconocido';
+                html += '<div class="activity-item"><span>📄</span><span>Token: ' + token.substring(0,20) + '...</span><span>' + date + '</span></div>';
+            });
+            if (!html) html = '<p style="color:var(--text-dim);padding:20px;text-align:center;">No hay actividad reciente</p>';
+            document.getElementById('recent-activity').innerHTML = html;
+        }
+
+        function setupDropzone() {
+            var dz = document.getElementById('dropzone');
+            dz.addEventListener('click', function() { document.getElementById('pfile').click(); });
+            ['dragenter','dragover','dragleave','drop'].forEach(function(e) {
+                dz.addEventListener(e, function(ev) { ev.preventDefault(); ev.stopPropagation(); });
+            });
+            dz.addEventListener('dragover', function() { dz.classList.add('active'); });
+            dz.addEventListener('dragleave', function() { dz.classList.remove('active'); });
+            dz.addEventListener('drop', function(e) {
+                dz.classList.remove('active');
+                document.getElementById('pfile').files = e.dataTransfer.files;
+                updateFilePreview(e.dataTransfer.files);
+            });
+            document.getElementById('pfile').addEventListener('change', function(e) {
+                updateFilePreview(e.target.files);
+            });
+        }
+
+        function updateFilePreview(files) {
+            var html = '';
+            Array.from(files).forEach(function(f) {
+                var icon = getFileIcon(f.type, f.name);
+                var size = formatSize(f.size);
+                html += '<div class="file-item"><span>' + icon + '</span><span>' + f.name + '</span><span>' + size + '</span></div>';
             });
             document.getElementById('file-preview').innerHTML = html;
-        });
-
-        function showRegister() {
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('register-panel').style.display = 'block';
-            document.getElementById('token-panel').style.display = 'none';
-            document.getElementById('token-result').style.display = 'none';
-            document.querySelector('#register-panel form').style.display = 'block';
-            document.querySelector('#register-panel form').reset();
-            document.getElementById('file-preview').innerHTML = '';
         }
 
-        function showToken() {
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('register-panel').style.display = 'none';
-            document.getElementById('token-panel').style.display = 'block';
-            document.getElementById('doc-viewer').style.display = 'none';
-            document.getElementById('token-error').style.display = 'none';
-            document.getElementById('atoken').value = '';
+        function getFileIcon(type, name) {
+            if (type.includes('image')) return '🖼';
+            if (type.includes('video')) return '🎬';
+            if (type.includes('pdf')) return '📕';
+            if (type.includes('zip') || type.includes('rar') || name.endsWith('.7z')) return '📦';
+            if (type.includes('word') || type.includes('doc')) return '📘';
+            return '📄';
         }
 
-        function showMenu() {
-            document.getElementById('menu').style.display = 'grid';
-            document.getElementById('register-panel').style.display = 'none';
-            document.getElementById('token-panel').style.display = 'none';
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
+            return (bytes/1048576).toFixed(1) + ' MB';
+        }
+
+        function addLink() {
+            var container = document.getElementById('links-container');
+            var row = document.createElement('div');
+            row.className = 'link-row';
+            row.innerHTML = '<input type="url" class="link-input" placeholder="https://..."><button type="button" class="btn-icon" onclick="this.parentElement.remove()">✕</button>';
+            container.appendChild(row);
         }
 
         async function registerProduct(e) {
@@ -331,27 +280,32 @@
                 var fInput = document.getElementById('pfile');
                 for (var i = 0; i < fInput.files.length; i++) {
                     var f = fInput.files[i];
-                    if (f.size > 10485760) throw new Error('Archivo muy grande: ' + f.name);
+                    if (f.size > 26214400) throw new Error('Archivo muy grande: ' + f.name);
                     var data = await readFile(f);
-                    files.push({ name: f.name, type: f.type, size: f.size, data: data });
+                    files.push({ name: f.name, type: f.type, size: f.size, data: data, icon: getFileIcon(f.type, f.name) });
                 }
+                var links = [];
+                document.querySelectorAll('.link-input').forEach(function(l) { if (l.value) links.push(l.value); });
                 var product = {
                     name: document.getElementById('pname').value.replace(/[<>]/g,''),
                     description: document.getElementById('pdesc').value.replace(/[<>]/g,''),
                     date: document.getElementById('pdate').value,
+                    category: document.getElementById('pcategory').value,
+                    tags: document.getElementById('ptags').value.split(',').map(function(t) { return t.trim(); }).filter(Boolean),
                     files: files,
-                    metadata: { created: new Date().toISOString() }
+                    links: links,
+                    metadata: { created: new Date().toISOString(), version: '4.0' }
                 };
                 var token = await CryptoManager.generateProductToken(product);
                 await SecureStorageManager.saveProduct(token, product);
                 document.getElementById('gen-token').textContent = token;
                 document.getElementById('token-result').style.display = 'block';
-                document.querySelector('#register-panel form').style.display = 'none';
-            } catch(err) {
-                alert(err.message);
-            }
+                document.getElementById('register-form').style.display = 'none';
+                loadVault();
+                updateStats();
+            } catch(err) { alert(err.message); }
             btn.disabled = false;
-            btn.textContent = 'Generar Token';
+            btn.textContent = '🔒 Generar Token';
         }
 
         function readFile(file) {
@@ -365,12 +319,12 @@
         async function verifyToken() {
             var token = document.getElementById('atoken').value.trim();
             var errDiv = document.getElementById('token-error');
-            if (!token) { errDiv.textContent = 'Ingrese un token'; errDiv.style.display = 'block'; return; }
             errDiv.style.display = 'none';
+            if (!token) { errDiv.textContent = 'Ingrese un token'; errDiv.style.display = 'block'; return; }
             try {
                 var data = await SecureStorageManager.getProduct(token);
                 if (data) {
-                    showDocs(data);
+                    showDocument(data);
                     document.getElementById('doc-viewer').style.display = 'block';
                 } else {
                     errDiv.textContent = 'Token no encontrado';
@@ -382,32 +336,69 @@
             }
         }
 
-        function showDocs(data) {
-            var html = '<div class="doc-card"><h4>'+data.name+'</h4>';
-            if (data.description) html += '<p style="color:var(--text-dim);font-size:13px;margin-bottom:8px;">'+data.description+'</p>';
-            html += '<div class="meta"><span>📅 '+data.date+'</span><span>🕐 '+new Date(data.metadata.created).toLocaleDateString()+'</span></div></div>';
-            html += '<p style="font-size:14px;margin-bottom:10px;">Documentos ('+data.files.length+'):</p>';
-            data.files.forEach(function(f) {
-                var icon = f.type && f.type.includes('pdf') ? '📕' : f.type && f.type.includes('image') ? '🖼' : '📄';
-                var size = f.size < 1024 ? f.size+' B' : f.size < 1048576 ? (f.size/1024).toFixed(1)+' KB' : (f.size/1048576).toFixed(1)+' MB';
-                html += '<div class="file-row"><div class="info"><span>'+icon+'</span><span>'+f.name+'</span><span class="size">'+size+'</span></div><div>';
-                if (f.url) {
-                    html += '<a href="'+f.url+'" target="_blank" class="btn-small">Ver</a> ';
-                    html += '<a href="'+f.url+'" download class="btn-small">Descargar</a>';
-                } else if (f.data) {
-                    html += '<a href="'+f.data+'" download="'+f.name+'" class="btn-small">Descargar</a>';
-                }
-                html += '</div></div>';
-            });
+        function showDocument(data) {
+            var html = '<div class="doc-card"><h4>' + data.name + '</h4>';
+            html += '<div class="doc-meta"><span>📅 ' + data.date + '</span><span>📁 ' + (data.category||'General') + '</span></div>';
+            if (data.description) html += '<p>' + data.description + '</p>';
+            if (data.tags && data.tags.length) html += '<div class="tags">' + data.tags.map(function(t) { return '<span class="tag">' + t + '</span>'; }).join('') + '</div>';
+            html += '</div>';
+
+            if (data.links && data.links.length) {
+                html += '<div class="links-section"><h4>🔗 Links</h4>';
+                data.links.forEach(function(l) { html += '<a href="' + l + '" target="_blank" class="link-item">🔗 ' + l + '</a>'; });
+                html += '</div>';
+            }
+
+            if (data.files && data.files.length) {
+                html += '<h4>📎 Archivos (' + data.files.length + ')</h4>';
+                data.files.forEach(function(f) {
+                    var icon = f.icon || '📄';
+                    var size = formatSize(f.size||0);
+                    html += '<div class="file-row"><div class="file-info"><span>' + icon + '</span><span>' + f.name + '</span><span class="file-size">' + size + '</span></div><div class="file-actions">';
+                    if (f.url) {
+                        html += '<a href="' + f.url + '" target="_blank" class="btn-sm">👁 Ver</a> ';
+                        html += '<a href="' + f.url + '" download class="btn-sm">⬇ Descargar</a>';
+                    } else if (f.data) {
+                        html += '<a href="' + f.data + '" download="' + f.name + '" class="btn-sm">⬇ Descargar</a>';
+                    }
+                    html += '</div></div>';
+                });
+            }
             document.getElementById('doc-content').innerHTML = html;
+                }
+
+        function renderVault() {
+            var html = '';
+            var category = document.getElementById('filter-category') ? document.getElementById('filter-category').value : 'all';
+            var items = Object.entries(vaultItems);
+            if (!items.length) { html = '<div class="empty-state"><span>📭</span><p>Tu boveda esta vacia</p><p class="small">Registra tu primer producto</p></div>'; }
+            else {
+                items.reverse().forEach(function(_ref) {
+                    var token = _ref[0];
+                    var item = _ref[1];
+                    var d = item.encrypted ? { timestamp: item.timestamp } : item;
+                    var date = d.timestamp ? new Date(d.timestamp).toLocaleDateString() : '-';
+                    html += '<div class="vault-card" onclick="navigator.clipboard.writeText(\'' + token + '\');alert(\'Token copiado: ' + token + '\')"><div class="vault-card-icon">🔐</div><div class="vault-card-info"><strong>Token</strong><code>' + token.substring(0,16) + '...</code><span class="vault-card-date">' + date + '</span></div></div>';
+                });
+            }
+            document.getElementById('vault-items').innerHTML = html;
+        }
+
+        function setupSearch() {
+            var searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    if (currentView === 'vault') renderVault();
+                });
+            }
         }
 
         function copyToken() {
             var t = document.getElementById('gen-token').textContent;
             navigator.clipboard.writeText(t).then(function() {
-                var b = document.querySelector('.btn-copy');
-                b.textContent = 'Copiado!';
-                setTimeout(function() { b.textContent = 'Copiar Token'; }, 2000);
+                var b = document.querySelector('.token-box button');
+                b.textContent = '✅ Copiado!';
+                setTimeout(function() { b.textContent = '📋 Copiar'; }, 2000);
             });
         }
 
