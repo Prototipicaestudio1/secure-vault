@@ -20,8 +20,20 @@
                 <button class="nav-btn" data-view="vault">🗄 Mi Boveda</button>
             </nav>
             <div class="sidebar-footer">
-                <div class="storage-bar"><div class="storage-fill" id="storage-fill"></div></div>
-                <span id="storage-text">0 MB usado</span>
+                <div class="storage-info-box">
+                    <div class="storage-header">
+                        <span>Almacenamiento</span>
+                        <span class="total" id="total-storage">0 MB / 25 GB</span>
+                    </div>
+                    <div class="storage-bar">
+                        <div class="storage-fill" id="storage-fill" style="width:0%"></div>
+                    </div>
+                    <div class="storage-services" id="service-dots"></div>
+                    <span id="storage-text" style="font-size:11px;color:var(--text-dim);">0 MB usado</span>
+                </div>
+                <button class="btn-expand" onclick="openStorageModal()">
+                    <span>⚡</span> Ampliar Almacenamiento
+                </button>
                 <button class="logout-btn" onclick="logout()">⏻ Cerrar Sesion</button>
             </div>
         </aside>
@@ -56,8 +68,6 @@
                         <div class="form-group"><label>Categoria</label><select id="pcategory"><option value="general">📁 General</option><option value="legal">⚖️ Legal</option><option value="financiero">💰 Financiero</option><option value="medico">🏥 Medico</option><option value="personal">👤 Personal</option></select></div>
                         <div class="form-group"><label>Descripcion</label><textarea id="pdesc" rows="3" maxlength="500" placeholder="Notas..."></textarea></div>
                         <div class="form-group"><label>Etiquetas</label><input type="text" id="ptags" placeholder="importante, urgente"></div>
-
-                        <!-- Zona de archivos -->
                         <div class="form-group">
                             <label>Archivos (max 25MB c/u)</label>
                             <div class="dropzone" id="dropzone">
@@ -66,8 +76,6 @@
                             </div>
                             <div class="file-list" id="file-preview"></div>
                         </div>
-
-                        <!-- Links -->
                         <div class="form-group">
                             <label>Links de referencia</label>
                             <div id="links-container">
@@ -75,13 +83,11 @@
                             </div>
                             <button type="button" class="btn-add" onclick="addLink()">+ Agregar link</button>
                         </div>
-
                         <div class="form-actions">
                             <button type="submit" class="btn-primary" id="submit-btn">🔒 Generar Token</button>
                             <button type="button" class="btn-secondary" onclick="showView('dashboard')">Cancelar</button>
                         </div>
                     </form>
-
                     <div id="token-result" class="result-card" style="display:none;">
                         <div class="success-icon">✅</div>
                         <h3>Registro Exitoso</h3>
@@ -110,17 +116,25 @@
 
             <!-- Mi Boveda -->
             <div class="view" id="view-vault">
-                <div class="section-header"><h2>🗄 Mi Boveda</h2><div class="filter-bar"><select id="filter-category"><option value="all">Todas</option><option value="general">📁 General</option><option value="legal">⚖️ Legal</option><option value="financiero">💰 Financiero</option><option value="medico">🏥 Medico</option><option value="personal">👤 Personal</option></select><select id="filter-type"><option value="all">Todos</option><option value="document">📄 Documentos</option><option value="image">🖼 Imagenes</option><option value="video">🎬 Videos</option><option value="archive">📦 Archivos</option></select></div></div>
+                <div class="section-header"><h2>🗄 Mi Boveda</h2><div class="filter-bar"><select id="filter-category"><option value="all">Todas</option><option value="general">📁 General</option><option value="legal">⚖️ Legal</option><option value="financiero">💰 Financiero</option><option value="medico">🏥 Medico</option><option value="personal">👤 Personal</option></select></div></div>
                 <div id="vault-items" class="vault-grid"></div>
             </div>
         </main>
     </div>
 
+    <!-- Modal de Almacenamiento -->
+    <div class="modal-overlay" id="storage-modal">
+        <div class="modal">
+            <h3>⚡ Ampliar Almacenamiento</h3>
+            <p>Conecta servicios gratuitos para aumentar tu espacio total.</p>
+            <div class="service-list" id="service-list"></div>
+            <button class="modal-close" onclick="closeStorageModal()">Cerrar</button>
+        </div>
+    </div>
+
     <script src="js/cripto.js"></script>
     <script src="js/security.js"></script>
     <script src="js/storage.js"></script>
-    <script src="js/preview.js"></script>
-    <script src="js/organizer.js"></script>
     <script>
         if (!sessionStorage.getItem('secure_session') || Date.now() > parseInt(sessionStorage.getItem('session_expiry')||'0')) {
             window.location.href = 'index.html';
@@ -129,6 +143,19 @@
         var vaultItems = {};
         var currentView = 'dashboard';
         var inactivityTimer;
+
+        var STORAGE_SERVICES = [
+            { id: 'cloudinary', name: 'Cloudinary', icon: '☁️', color: '#00d2a0', free: '25 GB', connected: true },
+            { id: 'gdrive', name: 'Google Drive', icon: '📗', color: '#4285f4', free: '15 GB', connected: false },
+            { id: 'dropbox', name: 'Dropbox', icon: '📦', color: '#0061ff', free: '2 GB', connected: false },
+            { id: 'onedrive', name: 'OneDrive', icon: '📘', color: '#0078d4', free: '5 GB', connected: false },
+            { id: 'mega', name: 'MEGA', icon: '🔴', color: '#ff3d00', free: '20 GB', connected: false },
+            { id: 'box', name: 'Box', icon: '📋', color: '#0061d5', free: '10 GB', connected: false },
+            { id: 'pcloud', name: 'pCloud', icon: '☁️', color: '#0d6efd', free: '10 GB', connected: false },
+            { id: 'mediafire', name: 'MediaFire', icon: '🔥', color: '#ff6b00', free: '10 GB', connected: false },
+            { id: 'internxt', name: 'Internxt', icon: '🛡️', color: '#6c5ce7', free: '10 GB', connected: false },
+            { id: 'storj', name: 'Storj', icon: '🌐', color: '#00bcd4', free: '25 GB', connected: false }
+        ];
 
         initApp();
 
@@ -141,9 +168,9 @@
             ['mousemove','keypress','click','touchstart'].forEach(function(e) {
                 document.addEventListener(e, resetInactivityTimer);
             });
-            setInterval(updateStats, 30000);
             updateStats();
             updateStorageInfo();
+            setInterval(updateStats, 30000);
         }
 
         function setupNavigation() {
@@ -160,7 +187,8 @@
         function showView(view) {
             currentView = view;
             document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
-            document.getElementById('view-' + view).classList.add('active');
+            var target = document.getElementById('view-' + view);
+            if (target) target.classList.add('active');
             document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
             var btn = document.querySelector('[data-view="' + view + '"]');
             if (btn) btn.classList.add('active');
@@ -183,26 +211,43 @@
         }
 
         function updateStats() {
-            var total = 0, images = 0, videos = 0, archives = 0;
-            Object.values(vaultItems).forEach(function(item) {
-                try {
-                    var d = item.encrypted ? item : { encrypted: item };
-                    total++;
-                } catch(e) { total++; }
-            });
-            document.getElementById('stat-total').textContent = Object.keys(vaultItems).length;
-            document.getElementById('stat-images').textContent = images || '0';
-            document.getElementById('stat-videos').textContent = videos || '0';
-            document.getElementById('stat-archives').textContent = archives || '0';
+            var total = Object.keys(vaultItems).length;
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-images').textContent = '0';
+            document.getElementById('stat-videos').textContent = '0';
+            document.getElementById('stat-archives').textContent = '0';
             updateStorageInfo();
         }
 
         function updateStorageInfo() {
             var used = new Blob([JSON.stringify(vaultItems)]).size;
             var mb = (used / 1048576).toFixed(2);
-            var pct = Math.min(100, (used / 26843545600) * 100).toFixed(1);
+            var totalGB = getTotalStorage();
+            var usedGB = used / 1073741824;
+            var pct = Math.min(100, (usedGB / totalGB) * 100).toFixed(1);
+            
             document.getElementById('storage-fill').style.width = pct + '%';
             document.getElementById('storage-text').textContent = mb + ' MB usado';
+            document.getElementById('total-storage').textContent = (usedGB).toFixed(2) + ' GB / ' + totalGB + ' GB';
+            renderServiceDots();
+        }
+
+        function getTotalStorage() {
+            var connected = STORAGE_SERVICES.filter(function(s) { return s.connected; });
+            var total = 0;
+            connected.forEach(function(s) {
+                total += parseInt(s.free);
+            });
+            return total;
+        }
+
+        function renderServiceDots() {
+            var dots = document.getElementById('service-dots');
+            var html = '';
+            STORAGE_SERVICES.forEach(function(s) {
+                html += '<span class="service-dot ' + (s.connected ? 'active' : 'inactive') + '" style="background:' + s.color + ';color:' + s.color + '" title="' + s.name + ': ' + s.free + (s.connected ? ' (Conectado)' : ' (No conectado)') + '"></span>';
+            });
+            dots.innerHTML = html;
         }
 
         function loadRecentActivity() {
@@ -211,8 +256,7 @@
             items.forEach(function(_ref) {
                 var token = _ref[0];
                 var item = _ref[1];
-                var d = item.encrypted ? { timestamp: item.timestamp } : item;
-                var date = d.timestamp ? new Date(d.timestamp).toLocaleString() : 'Desconocido';
+                var date = item.timestamp ? new Date(item.timestamp).toLocaleString() : 'Desconocido';
                 html += '<div class="activity-item"><span>📄</span><span>Token: ' + token.substring(0,20) + '...</span><span>' + date + '</span></div>';
             });
             if (!html) html = '<p style="color:var(--text-dim);padding:20px;text-align:center;">No hay actividad reciente</p>';
@@ -247,7 +291,7 @@
             document.getElementById('file-preview').innerHTML = html;
         }
 
-        function getFileIcon(type, name) {
+        function geFileIcon(type, name) {
             if (type.includes('image')) return '🖼';
             if (type.includes('video')) return '🎬';
             if (type.includes('pdf')) return '📕';
@@ -365,19 +409,17 @@
                 });
             }
             document.getElementById('doc-content').innerHTML = html;
-                }
+        }
 
         function renderVault() {
             var html = '';
-            var category = document.getElementById('filter-category') ? document.getElementById('filter-category').value : 'all';
             var items = Object.entries(vaultItems);
-            if (!items.length) { html = '<div class="empty-state"><span>📭</span><p>Tu boveda esta vacia</p><p class="small">Registra tu primer producto</p></div>'; }
+            if (!items.length) { html = '<div class="empty-state"><span>📭</span><p>Tu boveda esta vacia</p></div>'; }
             else {
                 items.reverse().forEach(function(_ref) {
                     var token = _ref[0];
                     var item = _ref[1];
-                    var d = item.encrypted ? { timestamp: item.timestamp } : item;
-                    var date = d.timestamp ? new Date(d.timestamp).toLocaleDateString() : '-';
+                    var date = item.timestamp ? new Date(item.timestamp).toLocaleDateString() : '-';
                     html += '<div class="vault-card" onclick="navigator.clipboard.writeText(\'' + token + '\');alert(\'Token copiado: ' + token + '\')"><div class="vault-card-icon">🔐</div><div class="vault-card-info"><strong>Token</strong><code>' + token.substring(0,16) + '...</code><span class="vault-card-date">' + date + '</span></div></div>';
                 });
             }
@@ -401,6 +443,46 @@
                 setTimeout(function() { b.textContent = '📋 Copiar'; }, 2000);
             });
         }
+
+        // Storage Modal
+        function openStorageModal() {
+            var modal = document.getElementById('storage-modal');
+            var list = document.getElementById('service-list');
+            var html = '';
+            STORAGE_SERVICES.forEach(function(s) {
+                html += '<div class="service-item">';
+                html += '<div class="service-info">';
+                html += '<div class="service-icon" style="background:' + s.color + '20;color:' + s.color + '">' + s.icon + '</div>';
+                html += '<div><span class="service-name">' + s.name + '</span><span class="service-free">' + s.free + ' gratis</span></div>';
+                html += '</div>';
+                if (s.connected) {
+                    html += '<span class="service-status connected">✓ Conectado</span>';
+                } else {
+                    html += '<button class="btn-connect" onclick="connectService(\'' + s.id + '\')">Conectar</button>';
+                }
+                html += '</div>';
+            });
+            list.innerHTML = html;
+            modal.classList.add('open');
+        }
+
+        function closeStorageModal() {
+            document.getElementById('storage-modal').classList.remove('open');
+        }
+
+        function connectService(id) {
+            var service = STORAGE_SERVICES.find(function(s) { return s.id === id; });
+            if (service) {
+                service.connected = true;
+                updateStorageInfo();
+                openStorageModal();
+                alert('✅ ' + service.name + ' conectado!\n+ ' + service.free + ' adicionales.\nTotal: ' + getTotalStorage() + ' GB');
+            }
+        }
+
+        document.getElementById('storage-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeStorageModal();
+        });
 
         function logout() {
             sessionStorage.clear();
