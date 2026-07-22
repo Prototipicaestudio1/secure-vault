@@ -5,67 +5,75 @@ var SecureStorageManager = {
         folder: 'secure-vault'
     },
 
-    // Guardar producto - TODO a Cloudinary
     saveProduct: async function(token, productData) {
-        // Subir archivos
         if (productData.files && productData.files.length > 0) {
             var uploadedFiles = await this._uploadFiles(productData.files, token);
             productData.files = uploadedFiles;
         }
         
-        // Guardar metadatos completos en Cloudinary
         await this._saveMetadata(token, productData);
-        
-        // Guardar token en lista maestra
         await this._addToTokenList(token, productData.name);
-        
         return true;
     },
 
-    // Obtener producto - TODO desde Cloudinary
     getProduct: async function(token) {
-        // Siempre buscar en Cloudinary
-        var metadata = await this._getMetadata(token);
-        if (metadata) return metadata;
+        // Intentar metadata.json
+        var urls = [
+            'https://res.cloudinary.com/' + this.cloudinaryConfig.cloudName + '/raw/upload/' + this.cloudinaryConfig.folder + '/' + token + '/metadata.json',
+            'https://res.cloudinary.com/' + this.cloudinaryConfig.cloudName + '/raw/upload/v1/' + this.cloudinaryConfig.folder + '/' + token + '/metadata.json'
+        ];
+        
+        for (var i = 0; i < urls.length; i++) {
+            try {
+                var response = await fetch(urls[i]);
+                if (response.ok) {
+                    var data = await response.json();
+                    console.log('✅ Encontrado en:', urls[i]);
+                    return data;
+                }
+            } catch(e) {}
+        }
+        
+        console.log('❌ No se encontro metadata para token:', token);
         return null;
     },
 
-    // Obtener todos los tokens
     getAllTokens: async function() {
-        return await this._getTokenList();
+        var urls = [
+            'https://res.cloudinary.com/' + this.cloudinaryConfig.cloudName + '/raw/upload/' + this.cloudinaryConfig.folder + '/token_list.json',
+            'https://res.cloudinary.com/' + this.cloudinaryConfig.cloudName + '/raw/upload/v1/' + this.cloudinaryConfig.folder + '/token_list.json'
+        ];
+        
+        for (var i = 0; i < urls.length; i++) {
+            try {
+                var response = await fetch(urls[i]);
+                if (response.ok) return await response.json();
+            } catch(e) {}
+        }
+        return [];
     },
 
-    // Obtener todos los registros
     getAllRecords: async function() {
-        var tokens = await this._getTokenList();
+        var tokens = await this.getAllTokens();
         var records = {};
-        
         for (var i = 0; i < tokens.length; i++) {
-            var meta = await this._getMetadata(tokens[i]);
+            var meta = await this.getProduct(tokens[i].token);
             if (meta) {
-                records[tokens[i]] = meta;
-                records[tokens[i]].token = tokens[i];
-                records[tokens[i]].timestamp = Date.now();
+                records[tokens[i].token] = meta;
             }
         }
         return records;
     },
 
-    // ============ CLOUDINARY ============
-
     _saveMetadata: async function(token, data) {
         var metadata = {
-            name: data.name,
-            description: data.description || '',
-            date: data.date,
-            category: data.category || 'general',
-            tags: data.tags || [],
+            name: data.name, description: data.description || '', date: data.date,
+            category: data.category || 'general', tags: data.tags || [],
             files: (data.files || []).map(function(f) {
-                return { name: f.name, type: f.type, size: f.size, url: f.url || f.data };
+                return { name: f.name, type: f.type, size: f.size, url: f.url };
             }),
             links: data.links || [],
-            created: data.metadata ? data.metadata.created : new Date().toISOString(),
-            version: '5.0'
+            created: data.metadata ? data.metadata.created : new Date().toISOString()
         };
         
         var blob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
@@ -73,29 +81,22 @@ var SecureStorageManager = {
         formData.append('file', blob, 'metadata.json');
         formData.append('upload_preset', this.cloudinaryConfig.uploadPreset);
         formData.append('folder', this.cloudinaryConfig.folder + '/' + token);
-        formData.append('public_id', 'metadata');
-        formData.append('overwrite', 'true');
         
-        await fetch(
-            'https://api.cloudinary.com/v1_1/' + this.cloudinaryConfig.cloudName + '/raw/upload',
-            { method: 'POST', body: formData }
-        );
-    },
-
-    _getMetadata: async function(token) {
-        var url = 'https://res.cloudinary.com/' + this.cloudinaryConfig.cloudName + 
-                  '/raw/upload/v1/' + this.cloudinaryConfig.folder + '/' + token + '/metadata.json';
         try {
-            var response = await fetch(url);
-            if (response.ok) return await response.json();
-        } catch(e) {}
-        return null;
+            var response = await fetch(
+                'https://api.cloudinary.com/v1_1/' + this.cloudinaryConfig.cloudName + '/raw/upload',
+                { method: 'POST', body: formData }
+            );
+            var result = await response.json();
+            console.log('✅ Metadata guardada:', result.secure_url);
+            return result;
+        } catch(e) {
+            console.error('Error guardando metadata:', e);
+        }
     },
 
     _addToTokenList: async function(token, name) {
-        var tokens = await this._getTokenList();
-        
-        // Evitar duplicados
+        var tokens = await this.getAllTokens();
         var exists = tokens.some(function(t) { return t.token === token; });
         if (!exists) {
             tokens.push({ token: token, name: name, added: new Date().toISOString() });
@@ -103,26 +104,22 @@ var SecureStorageManager = {
         
         var blob = new Blob([JSON.stringify(tokens)], { type: 'application/json' });
         var formData = new FormData();
-        formData.append('file', blob, 'tokens.json');
+        formData.append('file', blob, 'token_list.json');
         formData.append('upload_preset', this.cloudinaryConfig.uploadPreset);
         formData.append('folder', this.cloudinaryConfig.folder);
-        formData.append('public_id', 'token_list');
-        formData.append('overwrite', 'true');
         
-        await fetch(
-            'https://api.cloudinary.com/v1_1/' + this.cloudinaryConfig.cloudName + '/raw/upload',
-            { method: 'POST', body: formData }
-        );
-    },
-
-    _getTokenList: async function() {
-        var url = 'https://res.cloudinary.com/' + this.cloudinaryConfig.cloudName + 
-                  '/raw/upload/v1/' + this.cloudinaryConfig.folder + '/token_list.json';
         try {
-            var response = await fetch(url);
-            if (response.ok) return await response.json();
-        } catch(e) {}
-        return [];
+            var response = await fetch(
+                'https://api.cloudinary.com/v1_1/' + this.cloudinaryConfig.cloudName + '/raw/upload',
+                { method: 'POST', body: formData }
+            );
+            var result = await response.json();
+            console.log('✅ Token list actualizada:', result.secure_url);
+            localStorage.setItem('va_token_list_url', result.secure_url);
+            return result;
+        } catch(e) {
+            console.error('Error guardando token list:', e);
+        }
     },
 
     _uploadFiles: async function(files, token) {
@@ -134,9 +131,7 @@ var SecureStorageManager = {
                     name: files[i].name, type: files[i].type, size: files[i].size,
                     url: url, uploadedAt: new Date().toISOString()
                 });
-            } catch(e) {
-                console.error('Error subiendo:', files[i].name, e);
-            }
+            } catch(e) {}
         }
         return uploadedFiles;
     },
@@ -155,6 +150,7 @@ var SecureStorageManager = {
         );
         if (!response.ok) throw new Error('Upload failed');
         var result = await response.json();
+        console.log('✅ Archivo subido:', result.secure_url);
         return result.secure_url;
     },
 
