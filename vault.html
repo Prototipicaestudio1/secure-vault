@@ -135,6 +135,7 @@
     <script src="js/cripto.js"></script>
     <script src="js/security.js"></script>
     <script src="js/storage.js"></script>
+    <script src="js/firewall.js"></script>
     <script>
         if (!sessionStorage.getItem('secure_session') || Date.now() > parseInt(sessionStorage.getItem('session_expiry')||'0')) {
             window.location.href = 'index.html';
@@ -315,6 +316,7 @@
         }
 
         async function registerProduct(e) {
+            if (!Firewall.checkRequest("product_register")) { alert("Accion bloqueada por el firewall"); return; }
             e.preventDefault();
             var btn = document.getElementById('submit-btn');
             btn.disabled = true;
@@ -361,6 +363,7 @@
         }
 
         async function verifyToken() {
+            if (!Firewall.checkRequest("token_verify")) { document.getElementById("token-error").textContent = "Acceso bloqueado por seguridad"; document.getElementById("token-error").style.display = "block"; return; }
             var token = document.getElementById('atoken').value.trim();
             var errDiv = document.getElementById('token-error');
             errDiv.style.display = 'none';
