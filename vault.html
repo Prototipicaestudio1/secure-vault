@@ -364,7 +364,6 @@
         }
 
         async function verifyToken() {
-            if (Defender.state.threatLevel >= 4) { document.getElementById("token-error").textContent = "Sistema en modo defensivo"; document.getElementById("token-error").style.display = "block"; return; }
             if (!Firewall.checkRequest("token_verify")) { document.getElementById("token-error").textContent = "Acceso bloqueado por seguridad"; document.getElementById("token-error").style.display = "block"; return; }
             var token = document.getElementById('atoken').value.trim();
             var errDiv = document.getElementById('token-error');
