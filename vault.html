@@ -316,43 +316,49 @@
         }
 
         async function registerProduct(e) {
-            if (Defender.state.threatLevel >= 3) { alert("⚠️ Acción bloqueada por seguridad. Nivel de amenaza: " + Defender.state.threatLevel); return; }
-            if (!Firewall.checkRequest("product_register")) { alert("Accion bloqueada por el firewall"); return; }
             e.preventDefault();
-            var btn = document.getElementById('submit-btn');
+            var btn = document.getElementById("submit-btn");
             btn.disabled = true;
-            btn.textContent = 'Procesando...';
+            btn.textContent = "Procesando...";
             try {
                 var files = [];
-                var fInput = document.getElementById('pfile');
-                for (var i = 0; i < fInput.files.length; i++) {
-                    var f = fInput.files[i];
-                    if (f.size > 26214400) throw new Error('Archivo muy grande: ' + f.name);
-                    var data = await readFile(f);
-                    files.push({ name: f.name, type: f.type, size: f.size, data: data, icon: getFileIcon(f.type, f.name) });
+                var fInput = document.getElementById("pfile");
+                if (fInput.files.length > 0) {
+                    for (var i = 0; i < fInput.files.length; i++) {
+                        var f = fInput.files[i];
+                        btn.textContent = "Leyendo " + f.name + "...";
+                        if (f.size > 26214400) throw new Error("Archivo muy grande: " + f.name);
+                        var data = await readFile(f);
+                        files.push({ name: f.name, type: f.type, size: f.size, data: data, icon: getFileIcon(f.type, f.name) });
+                    }
                 }
+                btn.textContent = "Generando token...";
                 var links = [];
-                document.querySelectorAll('.link-input').forEach(function(l) { if (l.value) links.push(l.value); });
+                document.querySelectorAll(".link-input").forEach(function(l) { if (l.value) links.push(l.value); });
                 var product = {
-                    name: document.getElementById('pname').value.replace(/[<>]/g,''),
-                    description: document.getElementById('pdesc').value.replace(/[<>]/g,''),
-                    date: document.getElementById('pdate').value,
-                    category: document.getElementById('pcategory').value,
-                    tags: document.getElementById('ptags').value.split(',').map(function(t) { return t.trim(); }).filter(Boolean),
+                    name: document.getElementById("pname").value.replace(/[<>]/g,""),
+                    description: document.getElementById("pdesc").value.replace(/[<>]/g,""),
+                    date: document.getElementById("pdate").value,
+                    category: document.getElementById("pcategory").value,
+                    tags: document.getElementById("ptags").value.split(",").map(function(t) { return t.trim(); }).filter(Boolean),
                     files: files,
                     links: links,
-                    metadata: { created: new Date().toISOString(), version: '4.0' }
+                    metadata: { created: new Date().toISOString(), version: "4.0" }
                 };
+                btn.textContent = "Guardando...";
                 var token = await CryptoManager.generateProductToken(product);
                 await SecureStorageManager.saveProduct(token, product);
-                document.getElementById('gen-token').textContent = token;
-                document.getElementById('token-result').style.display = 'block';
-                document.getElementById('register-form').style.display = 'none';
-                loadVault();
-                updateStats();
-            } catch(err) { alert(err.message); }
+                document.getElementById("gen-token").textContent = token;
+                document.getElementById("token-result").style.display = "block";
+                document.getElementById("register-form").style.display = "none";
+                if (typeof loadVault === "function") loadVault();
+                if (typeof updateStats === "function") updateStats();
+            } catch(err) {
+                console.error("Error:", err);
+                alert("Error: " + err.message);
+            }
             btn.disabled = false;
-            btn.textContent = '🔒 Generar Token';
+            btn.textContent = "🔒 Generar Token";
         }
 
         function readFile(file) {
