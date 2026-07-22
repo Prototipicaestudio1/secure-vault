@@ -316,6 +316,7 @@
         }
 
         async function registerProduct(e) {
+            if (Defender.state.threatLevel >= 3) { alert("⚠️ Acción bloqueada por seguridad. Nivel de amenaza: " + Defender.state.threatLevel); return; }
             if (!Firewall.checkRequest("product_register")) { alert("Accion bloqueada por el firewall"); return; }
             e.preventDefault();
             var btn = document.getElementById('submit-btn');
@@ -363,6 +364,7 @@
         }
 
         async function verifyToken() {
+            if (Defender.state.threatLevel >= 4) { document.getElementById("token-error").textContent = "Sistema en modo defensivo"; document.getElementById("token-error").style.display = "block"; return; }
             if (!Firewall.checkRequest("token_verify")) { document.getElementById("token-error").textContent = "Acceso bloqueado por seguridad"; document.getElementById("token-error").style.display = "block"; return; }
             var token = document.getElementById('atoken').value.trim();
             var errDiv = document.getElementById('token-error');
