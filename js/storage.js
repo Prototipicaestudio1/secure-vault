@@ -1,4 +1,5 @@
 var SecureStorageManager = {
+    STORAGE_KEY: 'secure_vault_products',
     cloudinaryConfig: {
         cloudName: 'e6cszezf',
         uploadPreset: 'vault_documents',
@@ -7,136 +8,77 @@ var SecureStorageManager = {
 
     saveProduct: async function(token, productData) {
         if (productData.files && productData.files.length > 0) {
-            var uploadedFiles = await this._uploadFiles(productData.files, token);
-            productData.files = uploadedFiles;
+            for (var i = 0; i < productData.files.length; i++) {
+                if (productData.files[i].data) {
+                    try {
+                        var url = await this._uploadFile(productData.files[i], token);
+                        productData.files[i].url = url;
+                    } catch(e) {}
+                }
+            }
         }
         
-        await this._saveMetadata(token, productData);
-        await this._addToTokenList(token, productData.name);
+        var vault = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
+        vault[token] = productData;
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(vault));
+        
+        // Auto-descargar backup
+        this._autoBackup();
+        
         return true;
     },
 
     getProduct: async function(token) {
-        // Intentar metadata.json
-        var urls = [
-            'https://res.cloudinary.com/' + this.cloudinaryConfig.cloudName + '/raw/upload/' + this.cloudinaryConfig.folder + '/' + token + '/metadata.json',
-            'https://res.cloudinary.com/' + this.cloudinaryConfig.cloudName + '/raw/upload/v1/' + this.cloudinaryConfig.folder + '/' + token + '/metadata.json'
-        ];
-        
-        for (var i = 0; i < urls.length; i++) {
-            try {
-                var response = await fetch(urls[i]);
-                if (response.ok) {
-                    var data = await response.json();
-                    console.log('✅ Encontrado en:', urls[i]);
-                    return data;
+        var vault = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
+        return vault[token] || null;
+    },
+
+    getAllTokens: function() {
+        var vault = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
+        return Object.keys(vault);
+    },
+
+    getAllRecords: function() {
+        return JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
+    },
+
+    // Exportar todos los tokens a archivo
+    exportVault: function() {
+        var vault = localStorage.getItem(this.STORAGE_KEY) || '{}';
+        var blob = new Blob([vault], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'secure-vault-backup-' + new Date().toISOString().slice(0,10) + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return true;
+    },
+
+    // Importar tokens desde archivo
+    importVault: function(file) {
+        var self = this;
+        return new Promise(function(resolve, reject) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    var data = JSON.parse(e.target.result);
+                    var existing = JSON.parse(localStorage.getItem(self.STORAGE_KEY) || '{}');
+                    var merged = Object.assign({}, existing, data);
+                    localStorage.setItem(self.STORAGE_KEY, JSON.stringify(merged));
+                    resolve(Object.keys(data).length);
+                } catch(err) {
+                    reject(err);
                 }
-            } catch(e) {}
-        }
-        
-        console.log('❌ No se encontro metadata para token:', token);
-        return null;
+            };
+            reader.onerror = reject;
+            reader.readAsText(file);
+        });
     },
 
-    getAllTokens: async function() {
-        var urls = [
-            'https://res.cloudinary.com/' + this.cloudinaryConfig.cloudName + '/raw/upload/' + this.cloudinaryConfig.folder + '/token_list.json',
-            'https://res.cloudinary.com/' + this.cloudinaryConfig.cloudName + '/raw/upload/v1/' + this.cloudinaryConfig.folder + '/token_list.json'
-        ];
-        
-        for (var i = 0; i < urls.length; i++) {
-            try {
-                var response = await fetch(urls[i]);
-                if (response.ok) return await response.json();
-            } catch(e) {}
-        }
-        return [];
-    },
-
-    getAllRecords: async function() {
-        var tokens = await this.getAllTokens();
-        var records = {};
-        for (var i = 0; i < tokens.length; i++) {
-            var meta = await this.getProduct(tokens[i].token);
-            if (meta) {
-                records[tokens[i].token] = meta;
-            }
-        }
-        return records;
-    },
-
-    _saveMetadata: async function(token, data) {
-        var metadata = {
-            name: data.name, description: data.description || '', date: data.date,
-            category: data.category || 'general', tags: data.tags || [],
-            files: (data.files || []).map(function(f) {
-                return { name: f.name, type: f.type, size: f.size, url: f.url };
-            }),
-            links: data.links || [],
-            created: data.metadata ? data.metadata.created : new Date().toISOString()
-        };
-        
-        var blob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
-        var formData = new FormData();
-        formData.append('file', blob, 'metadata.json');
-        formData.append('upload_preset', this.cloudinaryConfig.uploadPreset);
-        formData.append('folder', this.cloudinaryConfig.folder + '/' + token);
-        
-        try {
-            var response = await fetch(
-                'https://api.cloudinary.com/v1_1/' + this.cloudinaryConfig.cloudName + '/raw/upload',
-                { method: 'POST', body: formData }
-            );
-            var result = await response.json();
-            console.log('✅ Metadata guardada:', result.secure_url);
-            return result;
-        } catch(e) {
-            console.error('Error guardando metadata:', e);
-        }
-    },
-
-    _addToTokenList: async function(token, name) {
-        var tokens = await this.getAllTokens();
-        var exists = tokens.some(function(t) { return t.token === token; });
-        if (!exists) {
-            tokens.push({ token: token, name: name, added: new Date().toISOString() });
-        }
-        
-        var blob = new Blob([JSON.stringify(tokens)], { type: 'application/json' });
-        var formData = new FormData();
-        formData.append('file', blob, 'token_list.json');
-        formData.append('upload_preset', this.cloudinaryConfig.uploadPreset);
-        formData.append('folder', this.cloudinaryConfig.folder);
-        
-        try {
-            var response = await fetch(
-                'https://api.cloudinary.com/v1_1/' + this.cloudinaryConfig.cloudName + '/raw/upload',
-                { method: 'POST', body: formData }
-            );
-            var result = await response.json();
-            console.log('✅ Token list actualizada:', result.secure_url);
-            localStorage.setItem('va_token_list_url', result.secure_url);
-            return result;
-        } catch(e) {
-            console.error('Error guardando token list:', e);
-        }
-    },
-
-    _uploadFiles: async function(files, token) {
-        var uploadedFiles = [];
-        for (var i = 0; i < files.length; i++) {
-            try {
-                var url = await this._uploadSingleFile(files[i], token);
-                uploadedFiles.push({
-                    name: files[i].name, type: files[i].type, size: files[i].size,
-                    url: url, uploadedAt: new Date().toISOString()
-                });
-            } catch(e) {}
-        }
-        return uploadedFiles;
-    },
-
-    _uploadSingleFile: async function(file, token) {
+    _uploadFile: async function(file, token) {
         var blob = this._base64ToBlob(file.data);
         var safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').toLowerCase().substring(0, 100);
         var formData = new FormData();
@@ -148,10 +90,18 @@ var SecureStorageManager = {
             'https://api.cloudinary.com/v1_1/' + this.cloudinaryConfig.cloudName + '/auto/upload',
             { method: 'POST', body: formData }
         );
-        if (!response.ok) throw new Error('Upload failed');
         var result = await response.json();
-        console.log('✅ Archivo subido:', result.secure_url);
         return result.secure_url;
+    },
+
+    _autoBackup: function() {
+        try {
+            var vault = localStorage.getItem(this.STORAGE_KEY);
+            localStorage.setItem('va_last_backup', JSON.stringify({
+                time: new Date().toISOString(),
+                tokens: Object.keys(JSON.parse(vault || '{}')).length
+            }));
+        } catch(e) {}
     },
 
     _base64ToBlob: function(base64) {

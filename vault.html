@@ -9,6 +9,7 @@
 </head>
 <body>
     <div class="app">
+<input type="file" id="import-file" accept=".json" style="display:none" onchange="importVault(this.files[0])">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo"><span>🔐</span> Secure Vault</div>
@@ -17,6 +18,8 @@
                 <button class="nav-btn active" data-view="dashboard">📊 Dashboard</button>
                 <button class="nav-btn" data-view="register">📝 Nuevo Registro</button>
                 <button class="nav-btn" data-view="consult">🔍 Consultar Token</button>
+                <button class="nav-btn" onclick="exportVault()">📥 Exportar Tokens</button>
+                <button class="nav-btn" onclick="document.getElementById('import-file').click()">📤 Importar Tokens</button>
                 <button class="nav-btn" data-view="vault">🗄 Mi Boveda</button>
             </nav>
             <div class="sidebar-footer">
@@ -495,6 +498,10 @@
         document.getElementById('storage-modal').addEventListener('click', function(e) {
             if (e.target === this) closeStorageModal();
         });
+
+        
+        function exportVault() { SecureStorageManager.exportVault(); alert("✅ Backup descargado. Guarda este archivo en un lugar seguro."); }
+        async function importVault(file) { if (!file) return; try { var count = await SecureStorageManager.importVault(file); alert("✅ " + count + " tokens importados"); location.reload(); } catch(e) { alert("❌ Archivo invalido"); } }
 
         function logout() {
             sessionStorage.clear();
