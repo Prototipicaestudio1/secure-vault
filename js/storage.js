@@ -1,112 +1,128 @@
 var SecureStorageManager = {
-    STORAGE_KEY: 'secure_vault_products',
-    ENCRYPTION_KEY: 'VAULT_MASTER_KEY_2024_SECURE',
-
     cloudinaryConfig: {
         cloudName: 'e6cszezf',
         uploadPreset: 'vault_documents',
         folder: 'secure-vault'
     },
 
+    // Guardar producto - TODO a Cloudinary
     saveProduct: async function(token, productData) {
-        try {
-            if (productData.files && productData.files.length > 0) {
-                var uploadedFiles = await this._uploadFiles(productData.files, token);
-                productData.files = uploadedFiles;
-            }
-            
-            // Guardar indice en Cloudinary
-            await this._saveIndex(token, productData);
-            
-            // Guardar local
-            var encrypted = await CryptoManager.encryptData(productData, this.ENCRYPTION_KEY);
-            var vault = this._getVault();
-            vault[token] = { encrypted: encrypted, timestamp: Date.now(), version: '4.0' };
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(vault));
-            
-            return true;
-        } catch (error) {
-            console.error('Error:', error);
-            throw error;
+        // Subir archivos
+        if (productData.files && productData.files.length > 0) {
+            var uploadedFiles = await this._uploadFiles(productData.files, token);
+            productData.files = uploadedFiles;
         }
+        
+        // Guardar metadatos completos en Cloudinary
+        await this._saveMetadata(token, productData);
+        
+        // Guardar token en lista maestra
+        await this._addToTokenList(token, productData.name);
+        
+        return true;
     },
 
+    // Obtener producto - TODO desde Cloudinary
     getProduct: async function(token) {
-        // 1. Buscar en localStorage
-        var vault = this._getVault();
-        var entry = vault[token];
-        if (entry && entry.encrypted) {
-            try {
-                var decrypted = await CryptoManager.decryptData(entry.encrypted, this.ENCRYPTION_KEY);
-                if (decrypted && decrypted.name) return decrypted;
-            } catch(e) {}
-        }
-        
-        // 2. Buscar indice en Cloudinary
-        try {
-            var indexData = await this._getIndex(token);
-            if (indexData) {
-                // Restaurar localmente
-                var encrypted = await CryptoManager.encryptData(indexData, this.ENCRYPTION_KEY);
-                vault[token] = { encrypted: encrypted, timestamp: Date.now(), version: '4.0', recovered: true };
-                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(vault));
-                return indexData;
-            }
-        } catch(e) {
-            console.log('No se pudo recuperar de Cloudinary');
-        }
-        
+        // Siempre buscar en Cloudinary
+        var metadata = await this._getMetadata(token);
+        if (metadata) return metadata;
         return null;
     },
 
-    getAllTokens: function() {
-        return Object.keys(this._getVault());
+    // Obtener todos los tokens
+    getAllTokens: async function() {
+        return await this._getTokenList();
     },
 
-    // Guardar indice en Cloudinary
-    _saveIndex: async function(token, data) {
-        var index = {
+    // Obtener todos los registros
+    getAllRecords: async function() {
+        var tokens = await this._getTokenList();
+        var records = {};
+        
+        for (var i = 0; i < tokens.length; i++) {
+            var meta = await this._getMetadata(tokens[i]);
+            if (meta) {
+                records[tokens[i]] = meta;
+                records[tokens[i]].token = tokens[i];
+                records[tokens[i]].timestamp = Date.now();
+            }
+        }
+        return records;
+    },
+
+    // ============ CLOUDINARY ============
+
+    _saveMetadata: async function(token, data) {
+        var metadata = {
             name: data.name,
-            description: data.description,
+            description: data.description || '',
             date: data.date,
-            category: data.category,
-            tags: data.tags,
-            files: data.files.map(function(f) {
-                return { name: f.name, type: f.type, size: f.size, url: f.url };
+            category: data.category || 'general',
+            tags: data.tags || [],
+            files: (data.files || []).map(function(f) {
+                return { name: f.name, type: f.type, size: f.size, url: f.url || f.data };
             }),
-            links: data.links,
-            metadata: data.metadata
+            links: data.links || [],
+            created: data.metadata ? data.metadata.created : new Date().toISOString(),
+            version: '5.0'
         };
         
-        var json = JSON.stringify(index);
-        var blob = new Blob([json], { type: 'application/json' });
+        var blob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
         var formData = new FormData();
-        formData.append('file', blob, 'index.json');
+        formData.append('file', blob, 'metadata.json');
         formData.append('upload_preset', this.cloudinaryConfig.uploadPreset);
         formData.append('folder', this.cloudinaryConfig.folder + '/' + token);
-        formData.append('public_id', 'index');
+        formData.append('public_id', 'metadata');
         formData.append('overwrite', 'true');
         
-        var response = await fetch(
-            'https://api.cloudinary.com/v1_1/' + this.cloudinaryConfig.cloudName + '/auto/upload',
+        await fetch(
+            'https://api.cloudinary.com/v1_1/' + this.cloudinaryConfig.cloudName + '/raw/upload',
             { method: 'POST', body: formData }
         );
-        return response.ok;
     },
 
-    // Recuperar indice de Cloudinary
-    _getIndex: async function(token) {
-        var indexUrl = 'https://res.cloudinary.com/' + this.cloudinaryConfig.cloudName + 
-                       '/raw/upload/v1/' + this.cloudinaryConfig.folder + '/' + token + '/index.json';
-        
+    _getMetadata: async function(token) {
+        var url = 'https://res.cloudinary.com/' + this.cloudinaryConfig.cloudName + 
+                  '/raw/upload/v1/' + this.cloudinaryConfig.folder + '/' + token + '/metadata.json';
         try {
-            var response = await fetch(indexUrl);
-            if (response.ok) {
-                var data = await response.json();
-                return data;
-            }
+            var response = await fetch(url);
+            if (response.ok) return await response.json();
         } catch(e) {}
         return null;
+    },
+
+    _addToTokenList: async function(token, name) {
+        var tokens = await this._getTokenList();
+        
+        // Evitar duplicados
+        var exists = tokens.some(function(t) { return t.token === token; });
+        if (!exists) {
+            tokens.push({ token: token, name: name, added: new Date().toISOString() });
+        }
+        
+        var blob = new Blob([JSON.stringify(tokens)], { type: 'application/json' });
+        var formData = new FormData();
+        formData.append('file', blob, 'tokens.json');
+        formData.append('upload_preset', this.cloudinaryConfig.uploadPreset);
+        formData.append('folder', this.cloudinaryConfig.folder);
+        formData.append('public_id', 'token_list');
+        formData.append('overwrite', 'true');
+        
+        await fetch(
+            'https://api.cloudinary.com/v1_1/' + this.cloudinaryConfig.cloudName + '/raw/upload',
+            { method: 'POST', body: formData }
+        );
+    },
+
+    _getTokenList: async function() {
+        var url = 'https://res.cloudinary.com/' + this.cloudinaryConfig.cloudName + 
+                  '/raw/upload/v1/' + this.cloudinaryConfig.folder + '/token_list.json';
+        try {
+            var response = await fetch(url);
+            if (response.ok) return await response.json();
+        } catch(e) {}
+        return [];
     },
 
     _uploadFiles: async function(files, token) {
@@ -116,10 +132,10 @@ var SecureStorageManager = {
                 var url = await this._uploadSingleFile(files[i], token);
                 uploadedFiles.push({
                     name: files[i].name, type: files[i].type, size: files[i].size,
-                    url: url, data: files[i].data, uploadedAt: new Date().toISOString()
+                    url: url, uploadedAt: new Date().toISOString()
                 });
             } catch(e) {
-                uploadedFiles.push(files[i]);
+                console.error('Error subiendo:', files[i].name, e);
             }
         }
         return uploadedFiles;
@@ -149,12 +165,5 @@ var SecureStorageManager = {
         var uInt8Array = new Uint8Array(raw.length);
         for (var i = 0; i < raw.length; i++) uInt8Array[i] = raw.charCodeAt(i);
         return new Blob([uInt8Array], { type: contentType });
-    },
-
-    _getVault: function() {
-        try {
-            var data = localStorage.getItem(this.STORAGE_KEY);
-            return data ? JSON.parse(data) : {};
-        } catch(e) { return {}; }
     }
 };

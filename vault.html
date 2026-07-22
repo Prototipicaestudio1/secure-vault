@@ -425,6 +425,7 @@
         function renderVault() {
             var html = '';
             var items = Object.entries(vaultItems);
+            console.log("Items en boveda:", items.length);
             if (!items.length) { html = '<div class="empty-state"><span>📭</span><p>Tu boveda esta vacia</p></div>'; }
             else {
                 items.reverse().forEach(function(_ref) {
