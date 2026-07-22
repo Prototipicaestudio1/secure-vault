@@ -16,9 +16,7 @@
             --error: #ff4444;
             --radius: 16px;
         }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
             background: var(--bg);
             color: var(--text);
@@ -29,13 +27,7 @@
             justify-content: center;
             -webkit-tap-highlight-color: transparent;
         }
-
-        .container {
-            width: 100%;
-            max-width: 400px;
-            padding: 24px;
-        }
-
+        .container { width: 100%; max-width: 400px; padding: 24px; }
         .card {
             background: var(--card);
             border: 1px solid var(--border);
@@ -43,128 +35,69 @@
             padding: 40px 32px 32px;
             text-align: center;
         }
-
         .icon {
-            width: 48px;
-            height: 48px;
+            width: 48px; height: 48px;
             background: var(--accent);
             border-radius: 12px;
             display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            margin-bottom: 20px;
+            align-items: center; justify-content: center;
+            font-size: 20px; margin-bottom: 20px;
             color: var(--bg);
         }
-
-        h1 {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 6px;
-            letter-spacing: -0.3px;
-        }
-
-        .subtitle {
-            font-size: 14px;
-            color: var(--text-dim);
-            margin-bottom: 28px;
-        }
-
-        .input-group {
-            margin-bottom: 16px;
-        }
-
+        h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+        .subtitle { font-size: 14px; color: var(--text-dim); margin-bottom: 28px; }
+        .input-group { margin-bottom: 16px; }
         input {
-            width: 100%;
-            padding: 14px 16px;
+            width: 100%; padding: 14px 16px;
             background: var(--bg);
             border: 1px solid var(--border);
             border-radius: 10px;
             color: var(--text);
-            font-size: 16px;
-            text-align: center;
+            font-size: 16px; text-align: center;
             letter-spacing: 2px;
             font-family: inherit;
-            transition: border 0.2s;
             outline: none;
         }
-
-        input:focus {
-            border-color: #555;
-        }
-
-        input::placeholder {
-            color: #444;
-            letter-spacing: 0;
-        }
-
+        input:focus { border-color: #555; }
+        input::placeholder { color: #444; letter-spacing: 0; }
         .keypad {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin-bottom: 12px;
+            gap: 8px; margin-bottom: 12px;
         }
-
         .keypad button {
-            padding: 14px;
-            font-size: 18px;
+            padding: 14px; font-size: 18px;
             background: var(--bg);
             border: 1px solid var(--border);
             border-radius: 10px;
             color: var(--text);
             cursor: pointer;
-            font-family: inherit;
-            font-weight: 500;
-            transition: all 0.15s;
+            font-family: inherit; font-weight: 500;
             user-select: none;
             -webkit-user-select: none;
         }
-
-        .keypad button:active {
-            background: #333;
-            transform: scale(0.96);
-        }
-
+        .keypad button:active { background: #333; transform: scale(0.96); }
         .keypad button.action {
             background: var(--accent);
-            color: var(--bg);
-            border: none;
-            font-weight: 600;
+            color: var(--bg); border: none; font-weight: 600;
         }
-
-        .keypad button.action:active {
-            background: #ddd;
-        }
-
+        .keypad button.action:active { background: #ddd; }
         .alert {
-            font-size: 13px;
-            padding: 8px;
-            border-radius: 8px;
-            margin-top: 12px;
-            display: none;
+            font-size: 13px; padding: 8px;
+            border-radius: 8px; margin-top: 12px; display: none;
         }
-
-        .alert.error {
-            background: rgba(255,68,68,0.1);
-            color: var(--error);
-            display: block;
-        }
-
-        .alert.success {
-            background: rgba(0,255,100,0.1);
-            color: #00cc66;
-            display: block;
-        }
-
-        .attempts {
-            font-size: 12px;
-            color: var(--text-dim);
-            margin-top: 16px;
-            min-height: 18px;
-        }
-
-        .attempts.warn {
-            color: var(--error);
+        .alert.error { background: rgba(255,68,68,0.1); color: var(--error); display: block; }
+        .alert.success { background: rgba(0,255,100,0.1); color: #00cc66; display: block; }
+        .attempts { font-size: 12px; color: var(--text-dim); margin-top: 16px; min-height: 18px; }
+        .attempts.warn { color: var(--error); }
+        .shield {
+            display: inline-block;
+            padding: 4px 8px;
+            background: rgba(0,210,160,0.1);
+            border-radius: 20px;
+            font-size: 10px;
+            color: #00d2a0;
+            margin-bottom: 16px;
         }
     </style>
 </head>
@@ -172,6 +105,7 @@
     <div class="container">
         <div class="card">
             <div class="icon">🔐</div>
+            <span class="shield">🛡️ Seguridad Activa</span>
             <h1>Acceso Privado</h1>
             <p class="subtitle">Ingrese su codigo de seguridad</p>
 
@@ -187,11 +121,12 @@
     </div>
 
     <script src="js/cripto.js"></script>
+    <script src="js/auth.js"></script>
     <script>
         var CONFIG = {
             MAX_ATTEMPTS: 3,
             LOCKOUT_TIME: 300000,
-            CODE_HASH: '37938b5f709794b49952ca757c95ffed5b9d72af61aa4093b98e8a30cd0f69ee1851e2ad3cf7e790d41e1c2053c8efaf9c8f5ad0d041d354dad818d5fbd6adcc'
+            CODE_HASH: '0c87914cce42b86393480a679ed05d03bd59c18221fe68e1415c975f74bc2edc0abad4819709d415a585c2a485321d8e48a39f87f1a67dfc3b63650c3a1af1da'
         };
 
         var attempts = parseInt(localStorage.getItem('va_attempts') || '0');
@@ -200,32 +135,21 @@
         buildKeypad();
         updateAttempts();
 
-        if (Date.now() < lockout) {
-            lockScreen();
-        }
+        if (Date.now() < lockout) { lockScreen(); }
 
         function buildKeypad() {
-            var kp = document.getElementById('keypad');
-            kp.innerHTML = '';
+            var kp = document.getElementById('keypad'); kp.innerHTML = '';
             ['1','2','3','4','5','6','7','8','9'].forEach(function(d) {
-                var b = document.createElement('button');
-                b.textContent = d;
-                b.onclick = function() { add(d); };
-                kp.appendChild(b);
+                var b = document.createElement('button'); b.textContent = d;
+                b.onclick = function() { add(d); }; kp.appendChild(b);
             });
-            var clr = document.createElement('button');
-            clr.textContent = '⌫';
+            var clr = document.createElement('button'); clr.textContent = '⌫';
             clr.onclick = function() { document.getElementById('code').value = ''; };
             kp.appendChild(clr);
-            var zero = document.createElement('button');
-            zero.textContent = '0';
-            zero.onclick = function() { add('0'); };
-            kp.appendChild(zero);
-            var go = document.createElement('button');
-            go.textContent = '→';
-            go.className = 'action';
-            go.onclick = verify;
-            kp.appendChild(go);
+            var zero = document.createElement('button'); zero.textContent = '0';
+            zero.onclick = function() { add('0'); }; kp.appendChild(zero);
+            var go = document.createElement('button'); go.textContent = '→';
+            go.className = 'action'; go.onclick = verify; kp.appendChild(go);
         }
 
         function add(d) {
@@ -244,14 +168,23 @@
             try {
                 var hash = await CryptoManager.hashString(code, 1000);
                 var ok = await CryptoManager.timingSafeCompare(hash, CONFIG.CODE_HASH);
+                
                 if (ok) {
-                    showAlert('Acceso concedido', 'success');
-                    sessionStorage.setItem('secure_session', CryptoManager.generateSessionToken());
-                    sessionStorage.setItem('session_expiry', Date.now() + 3600000);
-                    localStorage.removeItem('va_attempts');
-                    localStorage.removeItem('va_lockout');
-                    setTimeout(function() { window.location.href = 'vault.html'; }, 400);
+                    // Registrar acceso exitoso
+                    AuthManager.logAccess(true, 'Acceso con codigo maestro');
+                    
+                    // Verificar si hay actividad sospechosa
+                    if (AuthManager.detectSuspicious()) {
+                        showAlert('⚠️ Actividad sospechosa detectada. Se recomienda cambiar codigo.', 'error');
+                        setTimeout(function() { grantAccess(); }, 2000);
+                    } else {
+                        showAlert('✅ Acceso concedido', 'success');
+                        setTimeout(function() { grantAccess(); }, 400);
+                    }
                 } else {
+                    // Registrar acceso fallido
+                    AuthManager.logAccess(false, 'Codigo incorrecto');
+                    
                     attempts++;
                     localStorage.setItem('va_attempts', attempts);
                     document.getElementById('code').value = '';
@@ -269,11 +202,19 @@
             }
         }
 
+        function grantAccess() {
+            sessionStorage.setItem('secure_session', CryptoManager.generateSessionToken());
+            sessionStorage.setItem('session_expiry', Date.now() + 3600000);
+            localStorage.removeItem('va_attempts');
+            localStorage.removeItem('va_lockout');
+            window.location.href = 'vault.html';
+        }
+
         function lockScreen() {
             document.getElementById('keypad').style.opacity = '0.4';
             document.getElementById('keypad').style.pointerEvents = 'none';
             var remaining = Math.ceil((lockout - Date.now()) / 1000);
-            showAlert('Bloqueado. Espere ' + remaining + 's', 'error');
+            showAlert('⛔ Bloqueado. Espere ' + remaining + 's', 'error');
             var timer = setInterval(function() {
                 var r = Math.ceil((lockout - Date.now()) / 1000);
                 if (r <= 0) {
@@ -287,7 +228,7 @@
                     lockout = 0;
                     updateAttempts();
                 } else {
-                    showAlert('Bloqueado. Espere ' + r + 's', 'error');
+                    showAlert('⛔ Bloqueado. Espere ' + r + 's', 'error');
                 }
             }, 1000);
         }
