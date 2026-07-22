@@ -1,115 +1,133 @@
-// ============================================
-// GESTOR DE ALMACENAMIENTO SEGURO v4.0
-// Con verificacion de integridad
-// ============================================
 var SecureStorageManager = {
     STORAGE_KEY: 'secure_vault_products',
     ENCRYPTION_KEY: 'VAULT_MASTER_KEY_2024_SECURE',
-    
+
     cloudinaryConfig: {
         cloudName: 'e6cszezf',
         uploadPreset: 'vault_documents',
         folder: 'secure-vault'
     },
-    
-    // Guardar producto con firma de integridad
+
     saveProduct: async function(token, productData) {
         try {
-            // Subir archivos a Cloudinary
             if (productData.files && productData.files.length > 0) {
                 var uploadedFiles = await this._uploadFiles(productData.files, token);
                 productData.files = uploadedFiles;
             }
             
-            // Encriptar datos
+            // Guardar indice en Cloudinary
+            await this._saveIndex(token, productData);
+            
+            // Guardar local
             var encrypted = await CryptoManager.encryptData(productData, this.ENCRYPTION_KEY);
-            
-            // Guardar en localStorage
             var vault = this._getVault();
-            vault[token] = {
-                encrypted: encrypted,
-                timestamp: Date.now(),
-                version: '4.0'
-            };
-            
+            vault[token] = { encrypted: encrypted, timestamp: Date.now(), version: '4.0' };
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(vault));
-            
-            // Firmar con IntegrityGuard
-            if (typeof IntegrityGuard !== 'undefined') {
-                await IntegrityGuard.signProduct(token, productData);
-            }
             
             return true;
         } catch (error) {
-            console.error('Error saving product:', error);
+            console.error('Error:', error);
             throw error;
         }
     },
-    
-    // Obtener producto y verificar integridad
+
     getProduct: async function(token) {
-        try {
-            var vault = this._getVault();
-            var entry = vault[token];
-            if (!entry) return null;
-            
-            var decrypted = await CryptoManager.decryptData(entry.encrypted, this.ENCRYPTION_KEY);
-            
-            // Verificar integridad
-            if (typeof IntegrityGuard !== 'undefined') {
-                var verify = await IntegrityGuard.verifyProduct(token, decrypted);
-                if (!verify.valid) {
-                    console.warn('⚠️ Alerta de integridad:', verify.reason);
-                }
-            }
-            
-            return decrypted;
-        } catch (error) {
-            console.error('Error retrieving product:', error);
-            return null;
+        // 1. Buscar en localStorage
+        var vault = this._getVault();
+        var entry = vault[token];
+        if (entry && entry.encrypted) {
+            try {
+                var decrypted = await CryptoManager.decryptData(entry.encrypted, this.ENCRYPTION_KEY);
+                if (decrypted && decrypted.name) return decrypted;
+            } catch(e) {}
         }
-    },
-    
-    // Obtener todos los tokens
-    getAllTokens: function() {
-        var vault = this._getVault();
-        return Object.keys(vault);
-    },
-    
-    // Eliminar producto
-    deleteProduct: function(token) {
-        var vault = this._getVault();
-        delete vault[token];
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(vault));
         
-        var signatures = JSON.parse(localStorage.getItem('va_checksums') || '{}');
-        delete signatures[token];
-        localStorage.setItem('va_checksums', JSON.stringify(signatures));
+        // 2. Buscar indice en Cloudinary
+        try {
+            var indexData = await this._getIndex(token);
+            if (indexData) {
+                // Restaurar localmente
+                var encrypted = await CryptoManager.encryptData(indexData, this.ENCRYPTION_KEY);
+                vault[token] = { encrypted: encrypted, timestamp: Date.now(), version: '4.0', recovered: true };
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(vault));
+                return indexData;
+            }
+        } catch(e) {
+            console.log('No se pudo recuperar de Cloudinary');
+        }
+        
+        return null;
     },
-    
-    // Subir archivos
+
+    getAllTokens: function() {
+        return Object.keys(this._getVault());
+    },
+
+    // Guardar indice en Cloudinary
+    _saveIndex: async function(token, data) {
+        var index = {
+            name: data.name,
+            description: data.description,
+            date: data.date,
+            category: data.category,
+            tags: data.tags,
+            files: data.files.map(function(f) {
+                return { name: f.name, type: f.type, size: f.size, url: f.url };
+            }),
+            links: data.links,
+            metadata: data.metadata
+        };
+        
+        var json = JSON.stringify(index);
+        var blob = new Blob([json], { type: 'application/json' });
+        var formData = new FormData();
+        formData.append('file', blob, 'index.json');
+        formData.append('upload_preset', this.cloudinaryConfig.uploadPreset);
+        formData.append('folder', this.cloudinaryConfig.folder + '/' + token);
+        formData.append('public_id', 'index');
+        formData.append('overwrite', 'true');
+        
+        var response = await fetch(
+            'https://api.cloudinary.com/v1_1/' + this.cloudinaryConfig.cloudName + '/auto/upload',
+            { method: 'POST', body: formData }
+        );
+        return response.ok;
+    },
+
+    // Recuperar indice de Cloudinary
+    _getIndex: async function(token) {
+        var indexUrl = 'https://res.cloudinary.com/' + this.cloudinaryConfig.cloudName + 
+                       '/raw/upload/v1/' + this.cloudinaryConfig.folder + '/' + token + '/index.json';
+        
+        try {
+            var response = await fetch(indexUrl);
+            if (response.ok) {
+                var data = await response.json();
+                return data;
+            }
+        } catch(e) {}
+        return null;
+    },
+
     _uploadFiles: async function(files, token) {
         var uploadedFiles = [];
         for (var i = 0; i < files.length; i++) {
-            var file = files[i];
             try {
-                var url = await this._uploadSingleFile(file, token);
+                var url = await this._uploadSingleFile(files[i], token);
                 uploadedFiles.push({
-                    name: file.name, type: file.type, size: file.size,
-                    url: url, data: file.data,
-                    uploadedAt: new Date().toISOString()
+                    name: files[i].name, type: files[i].type, size: files[i].size,
+                    url: url, data: files[i].data, uploadedAt: new Date().toISOString()
                 });
-            } catch (error) {
-                console.error('Error uploading file:', file.name, error);
-                uploadedFiles.push(file);
+            } catch(e) {
+                uploadedFiles.push(files[i]);
             }
         }
         return uploadedFiles;
     },
-    
+
     _uploadSingleFile: async function(file, token) {
         var blob = this._base64ToBlob(file.data);
-        var safeName = this._sanitizeFileName(file.name);
+        var safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').toLowerCase().substring(0, 100);
         var formData = new FormData();
         formData.append('file', blob, safeName);
         formData.append('upload_preset', this.cloudinaryConfig.uploadPreset);
@@ -119,12 +137,11 @@ var SecureStorageManager = {
             'https://api.cloudinary.com/v1_1/' + this.cloudinaryConfig.cloudName + '/auto/upload',
             { method: 'POST', body: formData }
         );
-        
-        if (!response.ok) throw new Error('Upload failed: ' + response.status);
+        if (!response.ok) throw new Error('Upload failed');
         var result = await response.json();
         return result.secure_url;
     },
-    
+
     _base64ToBlob: function(base64) {
         var parts = base64.split(';base64,');
         var contentType = parts[0].split(':')[1] || 'application/octet-stream';
@@ -133,11 +150,7 @@ var SecureStorageManager = {
         for (var i = 0; i < raw.length; i++) uInt8Array[i] = raw.charCodeAt(i);
         return new Blob([uInt8Array], { type: contentType });
     },
-    
-    _sanitizeFileName: function(fileName) {
-        return fileName.replace(/[^a-zA-Z0-9.-]/g, '_').replace(/\s+/g, '_').toLowerCase().substring(0, 100);
-    },
-    
+
     _getVault: function() {
         try {
             var data = localStorage.getItem(this.STORAGE_KEY);
@@ -145,5 +158,3 @@ var SecureStorageManager = {
         } catch(e) { return {}; }
     }
 };
-
-console.log('💾 StorageManager v4.0 cargado - Integridad activa');
